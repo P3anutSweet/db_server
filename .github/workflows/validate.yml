@@ -50,4 +50,5 @@ jobs:
       - name: Validate review-only schema and generated field dictionary
         run: |
           python3 tools/schema/build_design.py
-          git diff --exit-code -- schema/teable-design.json docs/database-design/FIELD_DICTIONARY.md
+          python3 tools/schema/build_model_v2.py
+          git diff --exit-code -- schema/teable-design.json docs/database-design/FIELD_DICTIONARY.md schema/teable-model-v2.json docs/database-design/V2_FIELD_DICTIONARY.md
