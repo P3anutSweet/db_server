@@ -1,0 +1,36 @@
+name: Validate remote access setup
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  shell:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Validate Bash syntax and lint
+        run: |
+          bash -n scripts/bootstrap-ubuntu.sh
+          shellcheck scripts/bootstrap-ubuntu.sh
+          bash scripts/bootstrap-ubuntu.sh --help
+      - name: Reject invalid input without changing the runner
+        run: |
+          if bash scripts/bootstrap-ubuntu.sh --user root --client-ip 192.168.1.2; then exit 1; fi
+          if bash scripts/bootstrap-ubuntu.sh --user test --client-ip 999.1.1.1; then exit 1; fi
+          if bash scripts/bootstrap-ubuntu.sh --user; then exit 1; fi
+  powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD/scripts/connect.ps1", [ref]$tokens, [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
