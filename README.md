@@ -2,6 +2,16 @@
 
 Database-server project for an Ubuntu laptop. First milestone: SSH terminal access and a GNOME remote desktop from Windows on the same LAN.
 
+## Server storage
+
+SSH key access to `thunderobotdb` is verified. The prepared storage plan reserves **200GiB on the NVMe SSD for `/srv/db`**
+and uses the **1TB Western Digital disk for `/srv/backups`**. Applying the installer clears the WDC BitLocker partition.
+The procedure includes UUID-based mounts, daily configuration/log/export backups and execution records.
+Administrator execution is still required; this is not yet a verified live storage layout.
+
+- [Storage setup, backup schedule and recovery](docs/storage.md)
+- [2026-10-20 inspection and execution status](docs/operations/2026-10-20-storage.md)
+
 Supported installer targets: **Ubuntu Server 24.04 and 26.04 LTS, initially without a GUI**. The installer adds Ubuntu's minimal GNOME desktop and GNOME Remote Desktop. Confirm the laptop's actual release with `cat /etc/os-release` before installation. Database selection, installation and backups follow after remote access is verified.
 
 ## Get the repository onto Ubuntu
@@ -154,4 +164,3 @@ GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, and P
 - [Ubuntu OpenSSH server](https://ubuntu.com/server/docs/how-to/security/openssh-server/)
 - [Ubuntu GNOME Remote Desktop](https://ubuntu.com/desktop/docs/en/latest/how-to/share-your-desktop-remotely/)
 - [Ubuntu 26.04 minimal desktop package](https://packages.ubuntu.com/resolute/ubuntu-desktop-minimal)
-
