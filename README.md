@@ -1,8 +1,14 @@
 # db_server
 
-Database-server project for an Ubuntu laptop. First milestone: SSH terminal access and a GNOME remote desktop from Windows on the same LAN.
+Ubuntu database server with SSH, GNOME remote desktop and a running Teable Community instance for LAN browser access.
 
 ## Server storage
+
+Teable Community is running at **http://192.168.32.84**. Health and login-page checks returned HTTP 200 from the Windows client.
+See [Teable installation, access and database backups](docs/teable.md) for execution records and operations.
+The [product and overseas-order structure](docs/database-design/README.md) is drafted from the two supplied Excel files;
+business tables and records have not been imported. The confirmed quantity terminology is **已提货 / 待提货**:
+goods picked up by channel staff from the base/warehouse, tracked separately from customer delivery.
 
 Storage provisioning on `thunderobotdb` completed and was verified on **2026-10-20**.
 The NVMe SSD has a **200GiB logical volume mounted at `/srv/db`** (about 194GiB available).
@@ -10,12 +16,14 @@ The **1TB Western Digital disk was cleared and formatted as ext4**, mounted at `
 (about 916GiB available). The existing root volume remains 100GiB; about 173.9GiB remains unallocated in LVM.
 UUID-based mounts are installed. Daily configuration/log/export backups run at **03:00 Asia/Shanghai**,
 with up to five minutes of randomized delay, retaining the latest seven completed generations. The first backup succeeded.
-The database engine and consistent database dump production are not configured yet; the first backup contains no database exports.
+Teable's PostgreSQL export and isolated restore validation are now configured. The first Teable backup succeeded,
+and its PostgreSQL dump restored into a temporary database with 49 source and 49 restored tables.
+The earlier configuration-only backup remains historical; the business schema is still a draft.
 
 - [Storage setup, backup schedule and recovery](docs/storage.md)
 - [2026-10-20 inspection and execution status](docs/operations/2026-10-20-storage.md)
 
-Supported installer targets: **Ubuntu Server 24.04 and 26.04 LTS, initially without a GUI**. The installer adds Ubuntu's minimal GNOME desktop and GNOME Remote Desktop. Confirm the laptop's actual release with `cat /etc/os-release` before installation. Database selection, installation, consistent exports and restore testing remain the next database-specific steps.
+Supported remote-access bootstrap targets: **Ubuntu Server 24.04 and 26.04 LTS, initially without a GUI**. The bootstrap adds Ubuntu's minimal GNOME desktop and GNOME Remote Desktop. Confirm the laptop's actual release with `cat /etc/os-release` before installation. The Teable deployment script is separately restricted to the provisioned `thunderobotdb` host and expected storage UUIDs.
 
 ## Get the repository onto Ubuntu
 
@@ -160,7 +168,7 @@ For later access outside the LAN, use a private VPN such as Tailscale. Do not fo
 
 ## Validation
 
-GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, PowerShell parsing, Python compilation, storage tests and the backup calendar expression. Eleven storage/backup tests passed on the Ubuntu server, and the installed mounts, successful first backup and active timer were verified. Tests cover hardware and mount guards, fstab preservation, archive verification and retention behavior. CI does not install GNOME or provision physical disks; connection and storage verification require the real machines. Database recovery is not verified until an engine, consistent exports and restore tests are configured.
+GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, PowerShell parsing, Python compilation, deployment/backup tests, Compose configuration and design generation. Nineteen storage/deployment/backup tests and standalone Compose validation passed on the Ubuntu server. Live mounts, the successful WDC backup, timer and Windows-to-server HTTP access were verified. PostgreSQL restore validation passed; a full application recovery rehearsal, attachment recovery checks and off-machine backup remain future work. CI does not provision physical disks or deploy the live server.
 
 ## References
 
