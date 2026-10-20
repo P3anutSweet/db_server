@@ -1,0 +1,1060 @@
+{
+  "version": "research-draft-2026-10-20-v2",
+  "status": "review_only",
+  "supersedes": "draft-2026-10-20-v1",
+  "execution": "Logical model and required business controls; not a Teable API request or live migration.",
+  "confirmed_rules": [
+    "订单批次是业务渠道下单编号，一个批次可以有多个SKU，跨越多个月份，实际提货时间不固定。",
+    "已提货表示渠道业务从基地/仓库实际提走，不能当成国际发运或客户签收。"
+  ],
+  "modeling_decisions": [
+    "向基地提交预测的状态与渠道是否已经下单分开；具体业务节点仍待核对。"
+  ],
+  "references": [
+    {
+      "title": "ERPNext Sales Order",
+      "url": "https://docs.frappe.io/erpnext/sales-order",
+      "adopt": "Order header/lines; commitment separate from fulfillment"
+    },
+    {
+      "title": "ERPNext Delivery Note",
+      "url": "https://docs.frappe.io/erpnext/delivery-note",
+      "adopt": "Document and item rows; partial fulfillment"
+    },
+    {
+      "title": "ERPNext Close Sales Order",
+      "url": "https://docs.frappe.io/erpnext/close-sales-order",
+      "adopt": "Short close separate from completed pickup and cancellation"
+    },
+    {
+      "title": "ERPNext Item Variants",
+      "url": "https://docs.frappe.io/erpnext/item-variants",
+      "adopt": "Transactional SKU distinct from optional model/template"
+    },
+    {
+      "title": "Odoo Routes",
+      "url": "https://www.odoo.com/documentation/19.0/applications/inventory_and_mrp/inventory/shipping_receiving/daily_operations/use_routes.html",
+      "adopt": "Physical milestones remain separate; warehouse picking is not automatically channel handover"
+    },
+    {
+      "title": "GS1 Pack/case quantity",
+      "url": "https://www.gs1.org/1/gtinrules/en/rule/270/packcase-quantity",
+      "adopt": "Packaging levels and changed pack quantities require explicit GTIN handling"
+    }
+  ],
+  "tables": [
+    {
+      "key": "channels",
+      "name": "业务渠道",
+      "group": "business",
+      "grain": "一个下单业务渠道；不默认等同客户公司或市场。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "渠道编码",
+          "type": "text",
+          "notes": "稳定唯一编码"
+        },
+        {
+          "key": "name",
+          "name": "渠道名称",
+          "type": "text",
+          "notes": "用户确认的渠道名称"
+        },
+        {
+          "key": "market",
+          "name": "市场",
+          "type": "singleSelect",
+          "notes": "来自已核对的市场，不凭市场自动生成渠道"
+        },
+        {
+          "key": "customer_name",
+          "name": "客户名称待核对",
+          "type": "text",
+          "notes": "可为空；客户公司主数据以后单独规范"
+        },
+        {
+          "key": "owner",
+          "name": "业务负责人",
+          "type": "user",
+          "notes": "执行导入的账户不自动成为业务负责人"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "skus",
+      "name": "产品SKU",
+      "group": "business",
+      "grain": "一个正式物料号代表的可下单产品；型号系列不是交易行主键。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "part_number",
+          "name": "料号",
+          "type": "text",
+          "notes": "业务标识；记录ID独立且不可变"
+        },
+        {
+          "key": "brand",
+          "name": "品牌",
+          "type": "singleSelect",
+          "notes": "雷神/机械师等"
+        },
+        {
+          "key": "description_zh",
+          "name": "中文描述",
+          "type": "longText",
+          "notes": "保留规范描述"
+        },
+        {
+          "key": "description_en",
+          "name": "英文描述",
+          "type": "longText",
+          "notes": "缺失不猜测"
+        },
+        {
+          "key": "category",
+          "name": "主品类",
+          "type": "singleSelect",
+          "notes": "多标签冲突经确认后规范"
+        },
+        {
+          "key": "source_tags",
+          "name": "原品类及业务标签",
+          "type": "multipleSelect",
+          "notes": "全部保留原标记"
+        },
+        {
+          "key": "base_uom",
+          "name": "基础计量单位",
+          "type": "singleSelect",
+          "notes": "件/套等必须明确；来源未给出时待确认"
+        },
+        {
+          "key": "manufacturer",
+          "name": "制造商",
+          "type": "text",
+          "notes": "独立于品牌/供应商/ODM"
+        },
+        {
+          "key": "supplier",
+          "name": "供应商",
+          "type": "text",
+          "notes": "原字段保留"
+        },
+        {
+          "key": "odm",
+          "name": "ODM",
+          "type": "text",
+          "notes": "原字段保留"
+        },
+        {
+          "key": "pid_raw",
+          "name": "PID原文",
+          "type": "text",
+          "notes": "0有效；USB用途台账第二阶段处理"
+        },
+        {
+          "key": "variant_attributes",
+          "name": "已确认版本属性",
+          "type": "longText",
+          "notes": "颜色/轴体/布局/语言/套装等经确认记录，不凭名称自动拆分"
+        }
+      ],
+      "rules": [
+        "经确认的品牌+料号是候选唯一业务键；所有交易以不可变记录ID关联。"
+      ]
+    },
+    {
+      "key": "packaging",
+      "name": "包装规格",
+      "group": "business",
+      "grain": "一个SKU的一种包装层级和装量版本。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "sku",
+          "name": "产品SKU",
+          "type": "linkOne",
+          "notes": "正式规格必须关联SKU",
+          "target": "skus"
+        },
+        {
+          "key": "level",
+          "name": "包装层级",
+          "type": "singleSelect",
+          "notes": "单件/内盒/外箱等"
+        },
+        {
+          "key": "units_per_pack",
+          "name": "每包装基础数量",
+          "type": "decimal",
+          "notes": "正数；未确认装量时不得作为换算依据"
+        },
+        {
+          "key": "version",
+          "name": "规格版本",
+          "type": "text",
+          "notes": "装量改变新建版本，不回写历史单据"
+        },
+        {
+          "key": "confirmed",
+          "name": "换算已确认",
+          "type": "checkbox",
+          "notes": "原自由文本箱规不能直接视为已确认换算"
+        },
+        {
+          "key": "source_spec",
+          "name": "原箱规描述",
+          "type": "text",
+          "notes": "保留原文"
+        }
+      ],
+      "rules": [
+        "包装主数据改变不得改变已确认单据上的换算快照。"
+      ]
+    },
+    {
+      "key": "barcodes",
+      "name": "条码分配",
+      "group": "business",
+      "grain": "一个编码的分配/核对记录；预留码允许尚无SKU或包装。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "raw_code",
+          "name": "条码原文",
+          "type": "text",
+          "notes": "保留前导零"
+        },
+        {
+          "key": "scheme",
+          "name": "编码体系",
+          "type": "singleSelect",
+          "notes": "GTIN13/GTIN14/其他内部码/待确认"
+        },
+        {
+          "key": "normalized_gtin",
+          "name": "规范GTIN",
+          "type": "text",
+          "notes": "仅校验通过的GTIN规范成14位比较键；原文保留"
+        },
+        {
+          "key": "sku",
+          "name": "产品SKU",
+          "type": "linkOne",
+          "notes": "待补料号或预留时可空",
+          "target": "skus"
+        },
+        {
+          "key": "packaging",
+          "name": "包装规格",
+          "type": "linkOne",
+          "notes": "包装对应关系经确认，不任取一个同SKU条码",
+          "target": "packaging"
+        },
+        {
+          "key": "state",
+          "name": "分配状态",
+          "type": "singleSelect",
+          "notes": "预留/已分配/公式待计算/待核对/停用"
+        },
+        {
+          "key": "validation",
+          "name": "校验状态",
+          "type": "singleSelect",
+          "notes": "长度、校验位、对应关系分别验证"
+        },
+        {
+          "key": "source_row",
+          "name": "来源行",
+          "type": "linkOne",
+          "notes": "原始证据",
+          "target": "source_rows"
+        }
+      ],
+      "rules": [
+        "同料号多码先核对包装/编码主体/历史差异，不能直接宣称是历史版本。"
+      ]
+    },
+    {
+      "key": "warehouses",
+      "name": "基地仓库",
+      "group": "business",
+      "grain": "一个实际发生渠道提货或退回的地点。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "基地仓库编码",
+          "type": "text",
+          "notes": "唯一编码"
+        },
+        {
+          "key": "name",
+          "name": "基地仓库名称",
+          "type": "text",
+          "notes": "正式名称"
+        },
+        {
+          "key": "active",
+          "name": "可使用",
+          "type": "checkbox",
+          "notes": "停用不删除历史引用"
+        }
+      ],
+      "rules": [
+        "这里只记录交接地点；没有完整收发存数据时不得声称能计算可用库存。"
+      ]
+    },
+    {
+      "key": "order_batches",
+      "name": "渠道订单批次",
+      "group": "business",
+      "grain": "用户确认：一个业务渠道下单编号；可跨月、包含多个SKU。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "batch_number",
+          "name": "订单批次号",
+          "type": "text",
+          "notes": "正式渠道下单编号；不是随意的分组备注"
+        },
+        {
+          "key": "channel",
+          "name": "业务渠道",
+          "type": "linkOne",
+          "notes": "已确认订单必须明确渠道",
+          "target": "channels"
+        },
+        {
+          "key": "placed_date",
+          "name": "渠道下单日期",
+          "type": "date",
+          "notes": "未知不补成导入日"
+        },
+        {
+          "key": "document_state",
+          "name": "订单状态",
+          "type": "singleSelect",
+          "notes": "草稿/已确认/暂停/已关闭/已取消"
+        },
+        {
+          "key": "source_batch_label",
+          "name": "原表批次文字",
+          "type": "text",
+          "notes": "缩写/日期描述/缺失字段先核对为正式编号"
+        },
+        {
+          "key": "owner",
+          "name": "负责人",
+          "type": "user",
+          "notes": "业务负责人"
+        },
+        {
+          "key": "source_rows",
+          "name": "来源行",
+          "type": "linkMany",
+          "notes": "可由多条旧行核对归并",
+          "target": "source_rows"
+        }
+      ],
+      "rules": [
+        "默认唯一范围为渠道+批次号；是否全公司唯一仍待确认。",
+        "月份和SKU都不是批次主键的一部分；更改排期不新建同一订单。",
+        "正式渠道订单和向基地提交预测是独立过程。"
+      ]
+    },
+    {
+      "key": "order_lines",
+      "name": "批次SKU明细",
+      "group": "business",
+      "grain": "一个批次内一个明确的SKU及交易要求行；不是一个月份一行。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "batch",
+          "name": "渠道订单批次",
+          "type": "linkOne",
+          "notes": "确认后必填",
+          "target": "order_batches"
+        },
+        {
+          "key": "line_number",
+          "name": "批次内行号",
+          "type": "integer",
+          "notes": "与批次组合唯一；不同要求的同SKU可多行"
+        },
+        {
+          "key": "sku",
+          "name": "产品SKU",
+          "type": "linkOne",
+          "notes": "确认后必填",
+          "target": "skus"
+        },
+        {
+          "key": "description_snapshot",
+          "name": "订单描述快照",
+          "type": "longText",
+          "notes": "下单时名称不随主数据改变"
+        },
+        {
+          "key": "requirements",
+          "name": "客户版本及要求",
+          "type": "longText",
+          "notes": "颜色/语言/轴体等不同要求不强行合并"
+        },
+        {
+          "key": "line_role",
+          "name": "明细性质",
+          "type": "singleSelect",
+          "notes": "常规/赠品/备品/其他；数量和指标分别过滤"
+        },
+        {
+          "key": "ordered_qty",
+          "name": "原始下单数量",
+          "type": "decimal",
+          "notes": "基础单位数量；确认后按受控变更调整"
+        },
+        {
+          "key": "base_uom_snapshot",
+          "name": "基础单位快照",
+          "type": "text",
+          "notes": "明确件/套等"
+        },
+        {
+          "key": "current_order_qty",
+          "name": "当前确认数量",
+          "type": "derived",
+          "notes": "原始数量+已确认增减单"
+        },
+        {
+          "key": "closed_qty",
+          "name": "已关闭余量",
+          "type": "derived",
+          "notes": "关闭-重新开放，不能伪装成已提货"
+        },
+        {
+          "key": "gross_picked_qty",
+          "name": "累计实际提货",
+          "type": "derived",
+          "notes": "期初+已确认未冲销的实际提货分配"
+        },
+        {
+          "key": "returned_qty",
+          "name": "实际退回基地",
+          "type": "derived",
+          "notes": "真实退回，区别于录入错误的冲销"
+        },
+        {
+          "key": "net_picked_qty",
+          "name": "净提货量",
+          "type": "derived",
+          "notes": "累计实际提货-实际退回"
+        },
+        {
+          "key": "fulfillment_credit_qty",
+          "name": "已履约数量",
+          "type": "derived",
+          "notes": "实际提货-需要补提的退回量，含已确认期初"
+        },
+        {
+          "key": "to_pick_qty",
+          "name": "待提货",
+          "type": "derived",
+          "notes": "当前确认数量-关闭余量-已履约数量；期初未知时为空"
+        },
+        {
+          "key": "pickup_state",
+          "name": "提货状态",
+          "type": "derived",
+          "notes": "未提/部分提/提货完成/超提异常；与订单状态独立"
+        },
+        {
+          "key": "source_rows",
+          "name": "来源行",
+          "type": "linkMany",
+          "notes": "多个原排期行归并后仍可追溯",
+          "target": "source_rows"
+        }
+      ],
+      "rules": [
+        "同一SKU不同交期通常属于同一明细的多个计划；不能靠源行号生成新业务身份。",
+        "是否合并相同SKU须先确认交易要求、单位和源数量不是重复快照。"
+      ]
+    },
+    {
+      "key": "line_plans",
+      "name": "分月计划",
+      "group": "business",
+      "grain": "某条SKU明细在一个计划节点、期间/日期上的数量版本。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "line",
+          "name": "批次SKU明细",
+          "type": "linkOne",
+          "notes": "计划始终从属于正式明细",
+          "target": "order_lines"
+        },
+        {
+          "key": "plan_kind",
+          "name": "计划节点",
+          "type": "singleSelect",
+          "notes": "基地预测/预计提货/预计客户交付/原计划节点待核对"
+        },
+        {
+          "key": "month",
+          "name": "计划年月",
+          "type": "text",
+          "notes": "YYYY-MM；跨年可辨，不能只填10月"
+        },
+        {
+          "key": "exact_date",
+          "name": "预计具体日期",
+          "type": "date",
+          "notes": "可空；只有月份时不伪造某一天"
+        },
+        {
+          "key": "planned_qty",
+          "name": "计划数量",
+          "type": "decimal",
+          "notes": "基础单位量，不是新增订单数量"
+        },
+        {
+          "key": "forecast_state",
+          "name": "基地预测提交状态",
+          "type": "singleSelect",
+          "notes": "未提交/部分提交/已提交/不适用"
+        },
+        {
+          "key": "submitted_date",
+          "name": "基地预测提交日期",
+          "type": "date",
+          "notes": "原J列对应节点先核对"
+        },
+        {
+          "key": "state",
+          "name": "版本状态",
+          "type": "singleSelect",
+          "notes": "有效/已替代/已取消"
+        },
+        {
+          "key": "supersedes",
+          "name": "替代旧计划",
+          "type": "linkOne",
+          "notes": "保留改期历史，不能让新旧版本同时计入",
+          "target": "line_plans"
+        },
+        {
+          "key": "change_reason",
+          "name": "改期说明",
+          "type": "longText",
+          "notes": "记录原因"
+        }
+      ],
+      "rules": [
+        "待提交基地预测不等同渠道尚未下单。",
+        "不同计划节点单独统计，不把预测+提货计划+客户交付计划相加。",
+        "提货时间不固定时允许没有具体日期；实际提货不强制关联一个预定日期。"
+      ]
+    },
+    {
+      "key": "handover_docs",
+      "name": "提货退回单",
+      "group": "business",
+      "grain": "一次基地与渠道的交接凭据；一张单可含多个SKU和多个订单批次。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "document_number",
+          "name": "交接单号",
+          "type": "text",
+          "notes": "稳定唯一编号"
+        },
+        {
+          "key": "type",
+          "name": "单据类型",
+          "type": "singleSelect",
+          "notes": "实际提货/实际退回/错误冲销"
+        },
+        {
+          "key": "channel",
+          "name": "业务渠道",
+          "type": "linkOne",
+          "notes": "同张单据为同一渠道",
+          "target": "channels"
+        },
+        {
+          "key": "warehouse",
+          "name": "基地仓库",
+          "type": "linkOne",
+          "notes": "同张单据为同一交接地点",
+          "target": "warehouses"
+        },
+        {
+          "key": "occurred_date",
+          "name": "实际交接日期",
+          "type": "date",
+          "notes": "发生时登记，不要求预先排定"
+        },
+        {
+          "key": "state",
+          "name": "单据状态",
+          "type": "singleSelect",
+          "notes": "草稿/已确认/已冲销"
+        },
+        {
+          "key": "posted_at",
+          "name": "确认时间",
+          "type": "dateTime",
+          "notes": "实际业务日期与系统确认时间分开"
+        },
+        {
+          "key": "evidence",
+          "name": "交接凭据",
+          "type": "attachment",
+          "notes": "提货单/退回单等"
+        },
+        {
+          "key": "reverses",
+          "name": "冲销原单",
+          "type": "linkOne",
+          "notes": "错误冲销必须指向原单；不是实物退货",
+          "target": "handover_docs"
+        }
+      ],
+      "rules": [
+        "草稿不计数；确认后不原地改SKU、数量或分配，错误通过受控冲销/更正单处理。"
+      ]
+    },
+    {
+      "key": "handover_lines",
+      "name": "交接单SKU行",
+      "group": "business",
+      "grain": "一次实际交接中的一种SKU及包装；不直接绑定某一个订单。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "document",
+          "name": "交接单",
+          "type": "linkOne",
+          "notes": "所属单据",
+          "target": "handover_docs"
+        },
+        {
+          "key": "line_number",
+          "name": "凭据行号",
+          "type": "integer",
+          "notes": "单据内唯一"
+        },
+        {
+          "key": "sku",
+          "name": "产品SKU",
+          "type": "linkOne",
+          "notes": "实际交接SKU",
+          "target": "skus"
+        },
+        {
+          "key": "packaging",
+          "name": "包装规格",
+          "type": "linkOne",
+          "notes": "按箱输入时必须已确认换算",
+          "target": "packaging"
+        },
+        {
+          "key": "quantity",
+          "name": "交接数量",
+          "type": "decimal",
+          "notes": "按实际输入单位保存的正数"
+        },
+        {
+          "key": "uom_snapshot",
+          "name": "输入单位快照",
+          "type": "text",
+          "notes": "箱/件/套等"
+        },
+        {
+          "key": "conversion_snapshot",
+          "name": "基础单位换算快照",
+          "type": "decimal",
+          "notes": "只取当时已确认的正换算，不随主数据改变"
+        },
+        {
+          "key": "base_quantity",
+          "name": "基础单位数量",
+          "type": "derived",
+          "notes": "数量×换算；需要整数件时拒绝分数"
+        }
+      ],
+      "rules": [
+        "一张物理凭据上的总数量只记一次，再由履约分配拆给多个订单，避免重复计提。"
+      ]
+    },
+    {
+      "key": "allocations",
+      "name": "履约分配",
+      "group": "business",
+      "grain": "一条交接行分配给某条订单明细的基础数量。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "handover_line",
+          "name": "交接单SKU行",
+          "type": "linkOne",
+          "notes": "实际凭据来源",
+          "target": "handover_lines"
+        },
+        {
+          "key": "order_line",
+          "name": "批次SKU明细",
+          "type": "linkOne",
+          "notes": "履约归属",
+          "target": "order_lines"
+        },
+        {
+          "key": "quantity",
+          "name": "分配基础数量",
+          "type": "decimal",
+          "notes": "正数；同张交接行的分配合计必须等于实交数量"
+        },
+        {
+          "key": "plan",
+          "name": "对应计划",
+          "type": "linkOne",
+          "notes": "可空；不固定时间的提货也可直接落到订单明细",
+          "target": "line_plans"
+        },
+        {
+          "key": "return_against",
+          "name": "原提货分配",
+          "type": "linkOne",
+          "notes": "实际退回必须可追溯原已提分配",
+          "target": "allocations"
+        },
+        {
+          "key": "return_resolution",
+          "name": "退回后处理",
+          "type": "singleSelect",
+          "notes": "需要补提/不再补提/待确认；不从退回动作自动推断"
+        }
+      ],
+      "rules": [
+        "SKU、基础单位、渠道必须与所关联单据/订单一致。",
+        "同一SKU的一次提货可分配到多个批次；只计物理数量一次。",
+        "退回累计不得超过该原分配可退量；需要补提的退回才重新打开履约需求。"
+      ]
+    },
+    {
+      "key": "line_actions",
+      "name": "订单数量变更",
+      "group": "business",
+      "grain": "对某条订单明细的一次有依据的增减、关闭或重开余量。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "line",
+          "name": "批次SKU明细",
+          "type": "linkOne",
+          "notes": "受影响明细",
+          "target": "order_lines"
+        },
+        {
+          "key": "action",
+          "name": "动作",
+          "type": "singleSelect",
+          "notes": "增加下单量/减少下单量/关闭余量/重开余量"
+        },
+        {
+          "key": "quantity",
+          "name": "基础数量",
+          "type": "decimal",
+          "notes": "正数，方向由动作确定"
+        },
+        {
+          "key": "reason",
+          "name": "原因",
+          "type": "longText",
+          "notes": "必须有渠道确认或业务依据"
+        },
+        {
+          "key": "state",
+          "name": "确认状态",
+          "type": "singleSelect",
+          "notes": "草稿/已确认/已冲销"
+        },
+        {
+          "key": "evidence",
+          "name": "依据",
+          "type": "attachment",
+          "notes": "经确认的改单/余量关闭依据"
+        }
+      ],
+      "rules": [
+        "关闭余量不是提货；已关闭部分不进入待提货。",
+        "不能直接把当前数量减到已履约数量和已关闭余量之下。"
+      ]
+    },
+    {
+      "key": "followups",
+      "name": "跟进记录",
+      "group": "business",
+      "grain": "一条共享或单独的业务文字说明，不能代替数量凭据。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "batch",
+          "name": "渠道订单批次",
+          "type": "linkOne",
+          "notes": "批次级说明可只挂批次",
+          "target": "order_batches"
+        },
+        {
+          "key": "lines",
+          "name": "相关SKU明细",
+          "type": "linkMany",
+          "notes": "需要时挂多条明细",
+          "target": "order_lines"
+        },
+        {
+          "key": "body",
+          "name": "内容",
+          "type": "longText",
+          "notes": "保留历史共享备注"
+        },
+        {
+          "key": "business_date",
+          "name": "业务记录日期",
+          "type": "date",
+          "notes": "未知时空，不用导入日充当历史日期"
+        },
+        {
+          "key": "source_row",
+          "name": "来源行",
+          "type": "linkOne",
+          "notes": "精确原始出处",
+          "target": "source_rows"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "opening_balances",
+      "name": "期初履约确认",
+      "group": "migration",
+      "grain": "一条经审核的历史余额说明；不是编造的历史提货单。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "line",
+          "name": "批次SKU明细",
+          "type": "linkOne",
+          "notes": "每明细每有效截点只有一套余额",
+          "target": "order_lines"
+        },
+        {
+          "key": "cutover_date",
+          "name": "历史截点",
+          "type": "date",
+          "notes": "明确到日；边界后新单据才计增量"
+        },
+        {
+          "key": "gross_picked_qty",
+          "name": "累计提货期初",
+          "type": "decimal",
+          "notes": "未知与0分开"
+        },
+        {
+          "key": "returned_qty",
+          "name": "累计退回期初",
+          "type": "decimal",
+          "notes": "必须确认，不从历史散文编造"
+        },
+        {
+          "key": "fulfillment_credit",
+          "name": "已履约期初",
+          "type": "decimal",
+          "notes": "退回处理差异须在说明中体现"
+        },
+        {
+          "key": "closed_qty",
+          "name": "关闭余量期初",
+          "type": "decimal",
+          "notes": "已完结不能自动推导全部提货或全部关闭"
+        },
+        {
+          "key": "confirmed",
+          "name": "已审核",
+          "type": "checkbox",
+          "notes": "未经审核权威余额不显示为零"
+        },
+        {
+          "key": "basis",
+          "name": "依据及假设",
+          "type": "longText",
+          "notes": "保留确认人和证据"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "import_batches",
+      "name": "导入快照",
+      "group": "migration",
+      "grain": "一次原文件快照；与业务订单批次分开。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "filename",
+          "name": "文件名",
+          "type": "text",
+          "notes": "原件保存在受限存储"
+        },
+        {
+          "key": "sha256",
+          "name": "文件哈希",
+          "type": "text",
+          "notes": "同快照重跑幂等"
+        },
+        {
+          "key": "mapping_version",
+          "name": "映射版本",
+          "type": "text",
+          "notes": "可重放"
+        },
+        {
+          "key": "imported_at",
+          "name": "导入时间",
+          "type": "dateTime",
+          "notes": "不作为业务日期"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "source_rows",
+      "name": "原始台账行",
+      "group": "migration",
+      "grain": "原表一行观察记录；先核对其批次、SKU和计划粒度。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "snapshot",
+          "name": "导入快照",
+          "type": "linkOne",
+          "notes": "对应文件",
+          "target": "import_batches"
+        },
+        {
+          "key": "sheet",
+          "name": "工作表",
+          "type": "text",
+          "notes": "原标签"
+        },
+        {
+          "key": "row",
+          "name": "行号",
+          "type": "integer",
+          "notes": "来源定位，非业务ID"
+        },
+        {
+          "key": "business_values",
+          "name": "白名单原值",
+          "type": "longText",
+          "notes": "排除凭据、隐藏页和非业务字段"
+        },
+        {
+          "key": "classification",
+          "name": "归属核对",
+          "type": "singleSelect",
+          "notes": "正式订单/分月计划/意向需求/重复快照/待确认"
+        },
+        {
+          "key": "matched_batch",
+          "name": "对应订单批次",
+          "type": "linkOne",
+          "notes": "渠道编号确认后关联",
+          "target": "order_batches"
+        },
+        {
+          "key": "matched_line",
+          "name": "对应SKU明细",
+          "type": "linkOne",
+          "notes": "不能用源行号代替稳定明细ID",
+          "target": "order_lines"
+        },
+        {
+          "key": "matched_plan",
+          "name": "对应计划",
+          "type": "linkOne",
+          "notes": "需要时映射计划节点",
+          "target": "line_plans"
+        }
+      ],
+      "rules": [
+        "新文件SHA改变时不能直接追加另一套订单；先核对稳定业务身份。"
+      ]
+    },
+    {
+      "key": "review_issues",
+      "name": "数据核对",
+      "group": "migration",
+      "grain": "一个数据冲突、缺失或归并问题。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "source",
+          "name": "来源行",
+          "type": "linkOne",
+          "notes": "原始证据",
+          "target": "source_rows"
+        },
+        {
+          "key": "kind",
+          "name": "问题类型",
+          "type": "singleSelect",
+          "notes": "条码/料号/批次/品牌/计划节点/状态数量等"
+        },
+        {
+          "key": "state",
+          "name": "处理状态",
+          "type": "singleSelect",
+          "notes": "未处理/处理中/已解决/暂缓"
+        },
+        {
+          "key": "decision",
+          "name": "处理结论",
+          "type": "longText",
+          "notes": "不覆盖原始证据"
+        }
+      ],
+      "rules": []
+    }
+  ],
+  "posting_requirements": [
+    "Posting requires one atomic/idempotent controlled write path; a Teable rollup alone is not an ERP posting engine.",
+    "Check document state, matching channel/SKU/UOM, exact allocation totals and remaining order allowance at posting time.",
+    "Same document cannot post twice; concurrent posts cannot both spend the same remaining allowance.",
+    "Posted values are not directly editable. Authorized reversal is linked and has opposite ledger effects exactly once.",
+    "Validate actual Community edition permissions and transaction behavior before enabling multi-user posting.",
+    "No inventory availability, revenue, ownership-transfer or financial-ledger claims from this model alone."
+  ],
+  "optional_later_modules": [
+    "型号系列与变体属性规范",
+    "海外发运与客户签收单据",
+    "正式客户/地址主数据",
+    "USB VID/PID用途台账",
+    "价格币种、开票和收款对接",
+    "独立意向需求/预测转单（如实际存在该流程）"
+  ],
+  "decisions_pending": [
+    "批次号是全公司唯一还是仅渠道内唯一",
+    "原K列计划交付节点",
+    "实际退回后补提还是不再补提",
+    "数量单位和箱规换算",
+    "历史期初数量和关闭余量",
+    "渠道与客户公司的对应关系"
+  ]
+}
