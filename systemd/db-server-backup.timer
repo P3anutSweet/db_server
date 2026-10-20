@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily db_server backup at 03:00 Asia/Shanghai
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Shanghai
+RandomizedDelaySec=5m
+Persistent=true
+Unit=db-server-backup.service
+
+[Install]
+WantedBy=timers.target
