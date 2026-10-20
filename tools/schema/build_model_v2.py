@@ -17,10 +17,67 @@ def add(key, name, grain, fields, rules=(), group='business'):
                    'primary_key': 'immutable record ID', 'fields': converted, 'rules': list(rules)})
 
 
+add('regions', '业务大区', '一个业务管理大区；目前为欧洲、东南亚、南美。', [
+    ('code', '大区编码', 'text', '稳定唯一编码，不按名称变化新建'),
+    ('name', '大区名称', 'text', '欧洲/东南亚/南美；采用用户的业务分组'),
+    ('active', '启用', 'checkbox', '停用不删除历史引用'),
+])
+add('markets', '地区市场', '一个经确认的地区市场；不是客户或业务渠道。', [
+    ('code', '市场编码', 'text', '稳定唯一编码'),
+    ('name', '市场名称', 'text', '如波兰、巴西、越南；示例不是本次新增的真实记录'),
+    ('region', '业务大区', 'linkOne', '正常归属一个业务大区；来源冲突时暂空并待核对', 'regions'),
+    ('owner', '市场负责人', 'user', '业务负责人'),
+    ('active', '启用', 'checkbox', '历史市场不删除'),
+], ['市场的大区来自确认的业务归属，不强按地理位置或旧工作表括号标签推断。'])
+add('customers', '客户档案', '一个可识别的业务客户；同一客户可以服务多个市场。', [
+    ('code', '客户编码', 'text', '稳定唯一编码；名称不是唯一键'),
+    ('name', '客户名称', 'text', '公司或业务客户的正式名称'),
+    ('markets', '经营市场', 'linkMany', '通常一个市场；跨市场同一客户复用档案，各市场下均可查看', 'markets'),
+    ('owner', '客户负责人', 'user', '负责跟进的业务人员'),
+    ('state', '合作状态', 'singleSelect', '潜在/合作中/暂停/停止'),
+    ('notes', '客户说明', 'longText', '公司背景等；结构化偏好另记'),
+], ['客户不等同地区市场，也不凭渠道名称自动生成。',
+    '同名不自动合并，跨市场确认为同一客户才复用；市场未确认时留待核对。'])
+add('tags', '标签字典', '一个可复用的标签概念；客户偏好与产品标注使用同一字典。', [
+    ('code', '标签编码', 'text', '稳定唯一编码，避免RGB/RGB灯效等重复概念'),
+    ('name', '标签名称', 'text', '如性价比、RGB灯效、简约外观、无线连接'),
+    ('group', '标签分类', 'singleSelect', '产品定位/灯效外观/连接方式/使用场景/功能体验等'),
+    ('definition', '定义及标注标准', 'longText', '性价比等主观定位须说明依据和适用范围'),
+    ('aliases', '别名', 'longText', '便于搜索和迁移；不另建同义标签'),
+    ('applicable_to', '可用于', 'multipleSelect', '客户偏好/产品标注；不是所有偏好都可作为产品事实'),
+    ('active', '启用', 'checkbox', '停用保留历史，默认不供新标注选择'),
+])
+add('customer_preferences', '客户偏好', '一个客户在指定市场、品类下对某标签的一条偏好版本。', [
+    ('customer', '客户', 'linkOne', '偏好归属客户', 'customers'),
+    ('market', '适用市场', 'linkOne', '可空表示该客户全部经营市场；有值时必须属于其经营市场', 'markets'),
+    ('category_scope', '适用品类', 'singleSelect', '可空表示全品类；与SKU主品类共用受控选项'),
+    ('tag', '偏好标签', 'linkOne', '只能选允许用于客户偏好的标签', 'tags'),
+    ('stance', '偏好方向', 'singleSelect', '偏好/必须具备/避开'),
+    ('priority', '重要程度', 'singleSelect', '高/中/低；同一客户可有多个高优先偏好'),
+    ('basis', '依据', 'longText', '客户反馈/业务观察/历史订单等；未核实推测须注明'),
+    ('confirmed_on', '最近核实日期', 'date', '缺失不冒充已核实'),
+    ('valid_from', '生效日期', 'date', '可空表示未知'),
+    ('valid_to', '失效日期', 'date', '可空表示未设结束日，不能早于生效日期'),
+    ('state', '状态', 'singleSelect', '待核实/有效/已替代/已失效'),
+    ('owner', '记录负责人', 'user', '负责核实和维护'),
+], ['同一客户/市场范围/品类范围/标签同一时点仅一条有效偏好；变更保留历史。',
+    '不把某客户偏好扩散给该地区所有客户；空白表示未知，不表示不喜欢。',
+    '市场或品类特定记录与通用记录冲突时提示核对，不能隐式覆盖或自动推荐。'])
+add('product_tags', '产品标签', '一个SKU与一个标签的标注关系；保存依据与核实状态。', [
+    ('sku', '产品SKU', 'linkOne', '正式料号级别，不能只按相似型号推广', 'skus'),
+    ('tag', '产品标签', 'linkOne', '只能选允许用于产品标注的标签', 'tags'),
+    ('state', '核实状态', 'singleSelect', '待核实/已确认/已停用'),
+    ('basis', '标注依据', 'longText', '规格书/实测/定位审核等；不能只凭名称猜RGB或无线'),
+    ('confirmed_on', '最近核实日期', 'date', '确认后填写，不冒充产品发布日期'),
+    ('owner', '维护人', 'user', '负责核实产品特点'),
+], ['同SKU同标签只有一条当前有效标注；待核实不参与已确认产品筛选。',
+    '主品类仍单独管理，标签可多选；接口、尺寸、装量等精确规格保留结构化字段。',
+    '性价比是有依据的定位判断，不从低价格或客户偏好自动生成。'])
+
 add('channels', '业务渠道', '一个下单业务渠道；不默认等同客户公司或市场。', [
     ('code', '渠道编码', 'text', '稳定唯一编码'), ('name', '渠道名称', 'text', '用户确认的渠道名称'),
-    ('market', '市场', 'singleSelect', '来自已核对的市场，不凭市场自动生成渠道'),
-    ('customer_name', '客户名称待核对', 'text', '可为空；客户公司主数据以后单独规范'),
+    ('markets', '覆盖市场', 'linkMany', '已核对的业务范围，不凭市场自动生成渠道', 'markets'),
+    ('customers', '服务客户', 'linkMany', '经确认的客户关系；不强制渠道等于某客户', 'customers'),
     ('owner', '业务负责人', 'user', '执行导入的账户不自动成为业务负责人'),
 ])
 add('skus', '产品SKU', '一个正式物料号代表的可下单产品；型号系列不是交易行主键。', [
@@ -30,6 +87,7 @@ add('skus', '产品SKU', '一个正式物料号代表的可下单产品；型号
     ('description_en', '英文描述', 'longText', '缺失不猜测'),
     ('category', '主品类', 'singleSelect', '多标签冲突经确认后规范'),
     ('source_tags', '原品类及业务标签', 'multipleSelect', '全部保留原标记'),
+    ('confirmed_tags', '已确认产品标签', 'derived', '来自产品标签表的已确认且启用标签；界面展示及筛选'),
     ('base_uom', '基础计量单位', 'singleSelect', '件/套等必须明确；来源未给出时待确认'),
     ('manufacturer', '制造商', 'text', '独立于品牌/供应商/ODM'),
     ('supplier', '供应商', 'text', '原字段保留'), ('odm', 'ODM', 'text', '原字段保留'),
@@ -62,6 +120,8 @@ add('warehouses', '基地仓库', '一个实际发生渠道提货或退回的地
 add('order_batches', '渠道订单批次', '用户确认：一个业务渠道下单编号；可跨月、包含多个SKU。', [
     ('batch_number', '订单批次号', 'text', '正式渠道下单编号；不是随意的分组备注'),
     ('channel', '业务渠道', 'linkOne', '已确认订单必须明确渠道', 'channels'),
+    ('default_market', '默认地区市场', 'linkOne', '录入明细时预填；实际统计按明细市场，大区沿市场查询', 'markets'),
+    ('default_customer', '默认客户', 'linkOne', '录入明细时预填；未知可空，不用市场名冒充客户', 'customers'),
     ('placed_date', '渠道下单日期', 'date', '未知不补成导入日'),
     ('document_state', '订单状态', 'singleSelect', '草稿/已确认/暂停/已关闭/已取消'),
     ('source_batch_label', '原表批次文字', 'text', '缩写/日期描述/缺失字段先核对为正式编号'),
@@ -69,11 +129,15 @@ add('order_batches', '渠道订单批次', '用户确认：一个业务渠道下
     ('source_rows', '来源行', 'linkMany', '可由多条旧行核对归并', 'source_rows'),
 ], ['默认唯一范围为渠道+批次号；是否全公司唯一仍待确认。',
     '月份和SKU都不是批次主键的一部分；更改排期不新建同一订单。',
-    '正式渠道订单和向基地提交预测是独立过程。'])
+    '正式渠道订单和向基地提交预测是独立过程。',
+    '批次归属于渠道，客户和市场以明细归属为准，默认值变更不回写已确认明细。',
+    '不能把整个渠道批次的数量重复归给每个客户或地区市场。'])
 add('order_lines', '批次SKU明细', '一个批次内一个明确的SKU及交易要求行；不是一个月份一行。', [
     ('batch', '渠道订单批次', 'linkOne', '确认后必填', 'order_batches'),
     ('line_number', '批次内行号', 'integer', '与批次组合唯一；不同要求的同SKU可多行'),
     ('sku', '产品SKU', 'linkOne', '确认后必填', 'skus'),
+    ('market', '地区市场', 'linkOne', '实际业务归属；未知待核对。客户/市场统计以明细为粒度', 'markets'),
+    ('customer', '客户', 'linkOne', '可由主单预填并确认；未知待核对，不用渠道或市场冒充', 'customers'),
     ('description_snapshot', '订单描述快照', 'longText', '下单时名称不随主数据改变'),
     ('requirements', '客户版本及要求', 'longText', '颜色/语言/轴体等不同要求不强行合并'),
     ('line_role', '明细性质', 'singleSelect', '常规/赠品/备品/其他；数量和指标分别过滤'),
@@ -89,7 +153,8 @@ add('order_lines', '批次SKU明细', '一个批次内一个明确的SKU及交�
     ('pickup_state', '提货状态', 'derived', '未提/部分提/提货完成/超提异常；与订单状态独立'),
     ('source_rows', '来源行', 'linkMany', '多个原排期行归并后仍可追溯', 'source_rows'),
 ], ['同一SKU不同交期通常属于同一明细的多个计划；不能靠源行号生成新业务身份。',
-    '是否合并相同SKU须先确认交易要求、单位和源数量不是重复快照。'])
+    '是否合并相同SKU须先确认客户、市场、交易要求、单位和源数量不是重复快照。',
+    '已知客户时明细市场须属于客户经营市场；同SKU服务不同客户或市场时分行记录。'])
 add('line_plans', '分月计划', '某条SKU明细在一个计划节点、期间/日期上的数量版本。', [
     ('line', '批次SKU明细', 'linkOne', '计划始终从属于正式明细', 'order_lines'),
     ('plan_kind', '计划节点', 'singleSelect', '基地预测/预计提货/预计客户交付/原计划节点待核对'),
@@ -179,17 +244,19 @@ add('source_rows', '原始台账行', '原表一行观察记录；先核对其�
 ], ['新文件SHA改变时不能直接追加另一套订单；先核对稳定业务身份。'], group='migration')
 add('review_issues', '数据核对', '一个数据冲突、缺失或归并问题。', [
     ('source', '来源行', 'linkOne', '原始证据', 'source_rows'),
-    ('kind', '问题类型', 'singleSelect', '条码/料号/批次/品牌/计划节点/状态数量等'),
+    ('kind', '问题类型', 'singleSelect', '条码/料号/批次/品牌/计划节点/状态数量/市场归属/客户身份/标签偏好等'),
     ('state', '处理状态', 'singleSelect', '未处理/处理中/已解决/暂缓'),
     ('decision', '处理结论', 'longText', '不覆盖原始证据'),
 ], group='migration')
 
 MODEL = {
-    'version': 'research-draft-2026-10-20-v2', 'status': 'review_only', 'supersedes': 'draft-2026-10-20-v1',
+    'version': 'research-draft-2026-10-20-v2.1', 'status': 'review_only', 'supersedes': 'draft-2026-10-20-v1',
     'execution': 'Logical model and required business controls; not a Teable API request or live migration.',
     'confirmed_rules': [
         '订单批次是业务渠道下单编号，一个批次可以有多个SKU，跨越多个月份，实际提货时间不固定。',
         '已提货表示渠道业务从基地/仓库实际提走，不能当成国际发运或客户签收。',
+        '市场按欧洲、东南亚、南美三个业务大区管理，大区下分地区市场，市场下有不同客户。',
+        '需要客户偏好记录（如性价比、RGB灯效）及用于产品归类的标签。',
     ],
     'modeling_decisions': ['向基地提交预测的状态与渠道是否已经下单分开；具体业务节点仍待核对。'],
     'references': [
@@ -201,6 +268,22 @@ MODEL = {
         {'title': 'GS1 Pack/case quantity', 'url': 'https://www.gs1.org/1/gtinrules/en/rule/270/packcase-quantity', 'adopt': 'Packaging levels and changed pack quantities require explicit GTIN handling'},
     ],
     'tables': TABLES,
+    'region_seeds': [{'code': 'EU', 'name': '欧洲'}, {'code': 'SEA', 'name': '东南亚'}, {'code': 'SA', 'name': '南美'}],
+    'tag_examples': [
+        {'code': 'VALUE_FOR_MONEY', 'name': '性价比', 'group': '产品定位', 'applicable_to': ['客户偏好', '产品标注'], 'definition': '定位判断；须记录比较范围和业务依据，不能等同低价。'},
+        {'code': 'RGB_LIGHTING', 'name': 'RGB灯效', 'group': '灯效外观', 'applicable_to': ['客户偏好', '产品标注'], 'definition': '客户可表达喜好或避开；产品须经规格/实测核实。'},
+        {'code': 'MINIMAL_DESIGN', 'name': '简约外观', 'group': '灯效外观', 'applicable_to': ['客户偏好', '产品标注'], 'definition': '候选标签，标注标准需经审核。'},
+        {'code': 'WIRELESS', 'name': '无线连接', 'group': '连接方式', 'applicable_to': ['客户偏好', '产品标注'], 'definition': '产品有可用无线连接；具体协议仍由规格字段表达。'},
+    ],
+    'example_policy': 'Tag examples are candidate vocabulary, not assertions about any real customer or SKU. Region seeds reflect confirmed business groups; no live records are created.',
+    'classification_requirements': [
+        '地区市场归属业务大区；未知或源分组冲突先核对，尤其不能把香港强塞入东南亚。',
+        '客户有稳定身份，可覆盖多个市场；客户偏好可限定市场及品类，不能从地域自动继承。',
+        '订单市场/客户/渠道需要一致性校验；不得凭空为历史订单创建客户。',
+        '标签字典统一概念；客户偏好方向/权重与产品事实分别保存，未知不等同不具备。',
+        'Product/customer tag scope, current preference uniqueness, active dates and evidence state must be validated during implementation; this contract does not enforce live writes.',
+        '标签用于查找候选；实际报价、规格、库存与交付需另行核实，不提供未经验证的自动匹配分数。',
+    ],
     'posting_requirements': [
         'Posting requires one atomic/idempotent controlled write path; a Teable rollup alone is not an ERP posting engine.',
         'Check document state, matching channel/SKU/UOM, exact allocation totals and remaining order allowance at posting time.',
@@ -209,8 +292,8 @@ MODEL = {
         'Validate actual Community edition permissions and transaction behavior before enabling multi-user posting.',
         'No inventory availability, revenue, ownership-transfer or financial-ledger claims from this model alone.',
     ],
-    'optional_later_modules': ['型号系列与变体属性规范', '海外发运与客户签收单据', '正式客户/地址主数据', 'USB VID/PID用途台账', '价格币种、开票和收款对接', '独立意向需求/预测转单（如实际存在该流程）'],
-    'decisions_pending': ['批次号是全公司唯一还是仅渠道内唯一', '原K列计划交付节点', '实际退回后补提还是不再补提', '数量单位和箱规换算', '历史期初数量和关闭余量', '渠道与客户公司的对应关系'],
+    'optional_later_modules': ['型号系列与变体属性规范', '海外发运与客户签收单据', '客户多地址及联系人扩展', 'USB VID/PID用途台账', '价格币种、开票和收款对接', '独立意向需求/预测转单（如实际存在该流程）'],
+    'decisions_pending': ['批次号是全公司唯一还是仅渠道内唯一', '原K列计划交付节点', '实际退回后补提还是不再补提', '数量单位和箱规换算', '历史期初数量和关闭余量', '渠道与客户公司的对应关系', '各地区市场的大区归属及香港等旧分组冲突', '真实客户名单与经营市场', '标签定义、产品核实依据及客户偏好初始资料'],
 }
 
 
@@ -223,12 +306,15 @@ def validate(model):
             if 'target' in f:
                 assert f['target'] in keys, (t['key'], f['target'])
     assert {'order_batches', 'order_lines', 'line_plans', 'handover_docs', 'handover_lines', 'allocations'} <= keys
+    assert {'regions', 'markets', 'customers', 'tags', 'customer_preferences', 'product_tags'} <= keys
+    assert len({r['code'] for r in model['region_seeds']}) == len(model['region_seeds'])
+    assert len({t['code'] for t in model['tag_examples']}) == len(model['tag_examples'])
 
 
 def main():
     validate(MODEL)
     (ROOT / 'schema/teable-model-v2.json').write_text(json.dumps(MODEL, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    out = ['# V2字段字典', '', '这是研究修订草案，不是已建成的Teable表或已实现的约束。', '']
+    out = ['# V2.1字段字典', '', '这是研究修订草案，不是已建成的Teable表或已实现的约束。', '']
     for t in TABLES:
         out += [f'## {t["name"]}', '', t['grain'], '', '| 字段 | 逻辑类型 | 含义 |', '| --- | --- | --- |']
         out += [f'| {f["name"]} | {f["type"]}' + (f' → {f["target"]}' if 'target' in f else '') + f' | {f["notes"]} |' for f in t['fields']]
