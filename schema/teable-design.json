@@ -1,0 +1,1086 @@
+{
+  "version": "draft-2026-10-20-v1",
+  "status": "review_only",
+  "base_name": "外设产品与海外订单",
+  "execution": "Logical design contract only; not a Teable API request or PostgreSQL migration.",
+  "confirmed_terms": {
+    "source_M_已发货": "渠道业务已从基地或仓库提走的数量；新字段名已提货",
+    "source_N_待发货": "新字段名待提货；客户实际交付独立记录"
+  },
+  "tables": [
+    {
+      "key": "products",
+      "name": "产品档案",
+      "phase": 1,
+      "grain": "一个品牌下一个正式物料号对应一条 SKU；型号、颜色、轴体等不同料号分别保存。",
+      "fields": [
+        {
+          "key": "product_key",
+          "name": "产品编码",
+          "type": "text",
+          "required": true,
+          "notes": "稳定业务键：品牌 + 正式料号；Teable 内部记录ID另行生成"
+        },
+        {
+          "key": "brand",
+          "name": "品牌",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "雷神 / 机械师；源自产品表所在工作表"
+        },
+        {
+          "key": "part_number",
+          "name": "料号",
+          "type": "text",
+          "required": true,
+          "notes": "保留原文；关联键只做首尾空白清理和ASCII大小写统一"
+        },
+        {
+          "key": "description_zh",
+          "name": "中文物料描述",
+          "type": "longText",
+          "required": false,
+          "notes": "当前规范名称；历史订单保留其当时的描述"
+        },
+        {
+          "key": "description_en",
+          "name": "英文物料描述",
+          "type": "longText",
+          "required": false,
+          "notes": "机械师表L列；其他来源缺失时为空"
+        },
+        {
+          "key": "category_group",
+          "name": "主品类",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "笔记本/台式机/显示器/外设等；有多个源标记时待人工确认，不任取第一个"
+        },
+        {
+          "key": "source_category_flags",
+          "name": "源品类及业务标签",
+          "type": "multipleSelect",
+          "required": false,
+          "notes": "保留M:S或O:AA的全部标记；信创等业务属性不丢弃"
+        },
+        {
+          "key": "category_detail",
+          "name": "细分品类",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "键盘/鼠标/手柄等；未知时不从描述猜测"
+        },
+        {
+          "key": "manufacturer",
+          "name": "制造商",
+          "type": "text",
+          "required": false,
+          "notes": "独立于品牌、供应商和ODM保存"
+        },
+        {
+          "key": "supplier",
+          "name": "供应商",
+          "type": "text",
+          "required": false,
+          "notes": "机械师表M列"
+        },
+        {
+          "key": "odm",
+          "name": "ODM",
+          "type": "text",
+          "required": false,
+          "notes": "雷神2021后L列"
+        },
+        {
+          "key": "carton_spec",
+          "name": "储运箱规",
+          "type": "text",
+          "required": false,
+          "notes": "保留原箱规文本；确认单位后再拆装箱数/尺寸"
+        },
+        {
+          "key": "pid_raw",
+          "name": "PID原文",
+          "type": "text",
+          "required": false,
+          "notes": "十六进制文字；0是有效值，不作为缺失"
+        },
+        {
+          "key": "registered_date",
+          "name": "条码申请日期",
+          "type": "date",
+          "required": false,
+          "notes": "仅早期表的申请时间；不代替其他日期"
+        },
+        {
+          "key": "effective_date",
+          "name": "条码生效日期",
+          "type": "date",
+          "required": false,
+          "notes": "仅2017后表的生效时间"
+        },
+        {
+          "key": "source_updated_date",
+          "name": "源描述维护日期",
+          "type": "date",
+          "required": false,
+          "notes": "较新表H列；区别于Teable系统修改时间"
+        },
+        {
+          "key": "lifecycle",
+          "name": "生命周期",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "未知/在售/开发中/停产；不根据年代自动判定"
+        },
+        {
+          "key": "notes",
+          "name": "产品备注",
+          "type": "longText",
+          "required": false,
+          "notes": "仅业务备注；凭据页、登录信息禁止导入"
+        },
+        {
+          "key": "barcodes",
+          "name": "条码记录",
+          "type": "linkMany",
+          "required": false,
+          "notes": "允许同料号历史/不同包装条码共存",
+          "target": "barcodes"
+        },
+        {
+          "key": "source_rows",
+          "name": "来源行",
+          "type": "linkMany",
+          "required": true,
+          "notes": "每条合并后的产品仍能回溯所有来源行",
+          "target": "import_rows"
+        }
+      ],
+      "rules": [
+        "同一品牌+料号唯一；不同EAN不能自动拆成不同SKU。",
+        "缺失料号、保留占位或含非ASCII疑似字符的记录先进入待核对区。"
+      ]
+    },
+    {
+      "key": "barcodes",
+      "name": "条码台账",
+      "phase": 1,
+      "grain": "一条国家条码、包装条码或保留编码对应一条分配记录。",
+      "fields": [
+        {
+          "key": "barcode_key",
+          "name": "条码记录编码",
+          "type": "text",
+          "required": true,
+          "notes": "内部稳定键；缺失公式值时使用来源行键，不以空EAN生成共享记录"
+        },
+        {
+          "key": "barcode_value",
+          "name": "条码",
+          "type": "text",
+          "required": false,
+          "notes": "文本保存，保留前导零；未求值的公式不能当作条码"
+        },
+        {
+          "key": "barcode_type",
+          "name": "条码类型",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "国家EAN13 / 储运条码 / 待确认"
+        },
+        {
+          "key": "product",
+          "name": "产品",
+          "type": "linkOne",
+          "required": false,
+          "notes": "预留条码或未补齐料号的条码可暂不关联SKU",
+          "target": "products"
+        },
+        {
+          "key": "allocation_state",
+          "name": "分配状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "已分配/预留/缺少料号/公式待计算/校验待核对/停用"
+        },
+        {
+          "key": "validation_state",
+          "name": "校验状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "通过/未验证/长度错误/校验位错误/公式无缓存"
+        },
+        {
+          "key": "manufacturer",
+          "name": "制造商",
+          "type": "text",
+          "required": false,
+          "notes": "编码主体与品牌不是同一字段"
+        },
+        {
+          "key": "effective_date",
+          "name": "生效日期",
+          "type": "date",
+          "required": false,
+          "notes": "只使用明确给出的日期"
+        },
+        {
+          "key": "is_preferred",
+          "name": "当前首选",
+          "type": "checkbox",
+          "required": false,
+          "notes": "同SKU多个EAN时由用户确认，不取最后一行作为当前码"
+        },
+        {
+          "key": "source_rows",
+          "name": "来源行",
+          "type": "linkMany",
+          "required": true,
+          "notes": "保留分配、校验和公式来源",
+          "target": "import_rows"
+        }
+      ],
+      "rules": [
+        "国家EAN按13位和校验位验证；储运码独立验证，不强制套用EAN13规则。",
+        "多个EAN不自动丢弃；失效、首选和历史有效期需人工确认。"
+      ]
+    },
+    {
+      "key": "markets",
+      "name": "市场",
+      "phase": 1,
+      "grain": "一个销售市场对应一条记录；不按工作表创建独立订单表。",
+      "fields": [
+        {
+          "key": "market_key",
+          "name": "市场编码",
+          "type": "text",
+          "required": true,
+          "notes": "稳定编码"
+        },
+        {
+          "key": "name",
+          "name": "市场名称",
+          "type": "text",
+          "required": true,
+          "notes": "由源工作表标签提取；市场名称不等于客户公司"
+        },
+        {
+          "key": "source_region",
+          "name": "源区域分组",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "保留SA/SEA/EU原分组，后续可单独规范"
+        },
+        {
+          "key": "source_sheet",
+          "name": "源工作表",
+          "type": "text",
+          "required": false,
+          "notes": "保存原工作表全名"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "customers",
+      "name": "客户",
+      "phase": 1,
+      "grain": "一个经确认的客户公司对应一条记录；不能从国家标签编造客户。",
+      "fields": [
+        {
+          "key": "customer_key",
+          "name": "客户编码",
+          "type": "text",
+          "required": true,
+          "notes": "稳定客户编码"
+        },
+        {
+          "key": "customer_name",
+          "name": "客户公司",
+          "type": "text",
+          "required": true,
+          "notes": "源Excel没有独立客户列，第一轮可为空表"
+        },
+        {
+          "key": "market",
+          "name": "市场",
+          "type": "linkOne",
+          "required": false,
+          "notes": "同市场允许多个客户",
+          "target": "markets"
+        },
+        {
+          "key": "notes",
+          "name": "客户备注",
+          "type": "longText",
+          "required": false,
+          "notes": "不从订单备注自动抓取联系信息"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "orders",
+      "name": "订单批次",
+      "phase": 1,
+      "grain": "一个经确认的PO/PI/业务订单或批次；不以料号、序号或市场拼成真实订单号。",
+      "fields": [
+        {
+          "key": "order_key",
+          "name": "内部订单编码",
+          "type": "text",
+          "required": true,
+          "notes": "内部编码与客户PO/PI分开"
+        },
+        {
+          "key": "external_order_number",
+          "name": "客户PO或PI",
+          "type": "text",
+          "required": false,
+          "notes": "源表未提供，保持空值"
+        },
+        {
+          "key": "source_batch_label",
+          "name": "原批次描述",
+          "type": "text",
+          "required": false,
+          "notes": "源B列只作描述，不能默认唯一"
+        },
+        {
+          "key": "customer",
+          "name": "客户",
+          "type": "linkOne",
+          "required": false,
+          "notes": "经确认再关联",
+          "target": "customers"
+        },
+        {
+          "key": "market",
+          "name": "市场",
+          "type": "linkOne",
+          "required": true,
+          "notes": "业务归属",
+          "target": "markets"
+        },
+        {
+          "key": "order_date",
+          "name": "确认下单日期",
+          "type": "date",
+          "required": false,
+          "notes": "同批次多行日期不一致时必须核对"
+        },
+        {
+          "key": "lines",
+          "name": "订单明细",
+          "type": "linkMany",
+          "required": false,
+          "notes": "一单允许多SKU、多交付计划",
+          "target": "order_lines"
+        },
+        {
+          "key": "grouping_confirmed",
+          "name": "批次归并已确认",
+          "type": "checkbox",
+          "required": false,
+          "notes": "第一轮不自动合并空批次或同日同料号记录"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "order_lines",
+      "name": "订单明细",
+      "phase": 1,
+      "grain": "保留每一条源需求/订单/排期行；导入初始96行不做自动合单。",
+      "fields": [
+        {
+          "key": "line_key",
+          "name": "明细编码",
+          "type": "text",
+          "required": true,
+          "notes": "导入时按文件SHA256+工作表+行号生成幂等来源键"
+        },
+        {
+          "key": "order",
+          "name": "订单批次",
+          "type": "linkOne",
+          "required": false,
+          "notes": "待批次归并确认后关联；允许暂缺",
+          "target": "orders"
+        },
+        {
+          "key": "market",
+          "name": "市场",
+          "type": "linkOne",
+          "required": true,
+          "notes": "由工作表确定",
+          "target": "markets"
+        },
+        {
+          "key": "product",
+          "name": "产品",
+          "type": "linkOne",
+          "required": false,
+          "notes": "精确料号关联并验证品牌；品牌冲突时暂缓确认",
+          "target": "products"
+        },
+        {
+          "key": "demand_stage",
+          "name": "业务类型",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "需求/预测/确认订单/待核对；原状态不等同已签订单"
+        },
+        {
+          "key": "source_batch",
+          "name": "原批次描述",
+          "type": "text",
+          "required": false,
+          "notes": "B列原文，空白不擅自向下填充"
+        },
+        {
+          "key": "source_brand",
+          "name": "原品牌",
+          "type": "text",
+          "required": false,
+          "notes": "C列，与产品档案品牌分别保留"
+        },
+        {
+          "key": "source_category",
+          "name": "原品类",
+          "type": "text",
+          "required": false,
+          "notes": "D列，保留源分类以便复核"
+        },
+        {
+          "key": "source_part",
+          "name": "原料号",
+          "type": "text",
+          "required": true,
+          "notes": "E列；不拿型号模糊匹配代替料号"
+        },
+        {
+          "key": "source_ean",
+          "name": "原EAN",
+          "type": "text",
+          "required": false,
+          "notes": "F列；46行缺失可查找档案码，但多码时须确认"
+        },
+        {
+          "key": "description_snapshot",
+          "name": "下单时型号描述",
+          "type": "longText",
+          "required": false,
+          "notes": "H列，不随产品规范名称更新而覆盖"
+        },
+        {
+          "key": "customer_requirements",
+          "name": "客户描述及要求",
+          "type": "longText",
+          "required": false,
+          "notes": "G列，不从型号自动推断语言/轴体/定制要求"
+        },
+        {
+          "key": "order_date",
+          "name": "下单日期",
+          "type": "date",
+          "required": false,
+          "notes": "I列；空值不补为导入时间"
+        },
+        {
+          "key": "forecast_date",
+          "name": "预测提交日期",
+          "type": "date",
+          "required": false,
+          "notes": "J列，与下单日期分开"
+        },
+        {
+          "key": "planned_date",
+          "name": "计划交付日期",
+          "type": "date",
+          "required": false,
+          "notes": "K列；月度视图由日期生成，未知不落入某个月"
+        },
+        {
+          "key": "quantity",
+          "name": "需求或订单数量",
+          "type": "integer",
+          "required": true,
+          "notes": "L列；件数，不代表金额"
+        },
+        {
+          "key": "source_picked_up_qty",
+          "name": "原表已提货",
+          "type": "integer",
+          "required": false,
+          "notes": "M列原标题已发货；用户确认含义是渠道业务从基地/仓库提走"
+        },
+        {
+          "key": "source_pending_qty",
+          "name": "原表待提货",
+          "type": "integer",
+          "required": false,
+          "notes": "N列原标题待发货；保存缓存值及原公式供追溯"
+        },
+        {
+          "key": "opening_picked_up_qty",
+          "name": "期初已提货确认数",
+          "type": "integer",
+          "required": false,
+          "notes": "迁移核对后填写；确认之前留空，不以零掩盖未知"
+        },
+        {
+          "key": "opening_confirmed",
+          "name": "期初数量已核对",
+          "type": "checkbox",
+          "required": false,
+          "notes": "同时确认历史截点，避免与新提货事件重复累计"
+        },
+        {
+          "key": "cutover_at",
+          "name": "期初截点",
+          "type": "dateTime",
+          "required": false,
+          "notes": "实际确认的历史截点；不直接使用上传时间"
+        },
+        {
+          "key": "pickup_delta",
+          "name": "后续提货增量",
+          "type": "rollup",
+          "required": false,
+          "notes": "汇总已确认且未作废事件的提货增量",
+          "target": "fulfillment"
+        },
+        {
+          "key": "picked_up_qty",
+          "name": "已提货",
+          "type": "formula",
+          "required": false,
+          "notes": "期初已核对时=期初已提货确认数+后续提货增量；否则为空"
+        },
+        {
+          "key": "pending_pickup_qty",
+          "name": "待提货",
+          "type": "formula",
+          "required": false,
+          "notes": "期初已核对时=数量-已提货；否则为空；负数报警，不强制截成零"
+        },
+        {
+          "key": "source_status",
+          "name": "原订单状态",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "保留五种原状态；不据此反推数量"
+        },
+        {
+          "key": "workflow_stage",
+          "name": "当前业务进度",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "需求登记/预测已提交/备货中/待提货/部分提货/提货完成/客户交付中/客户已签收/取消/待核对"
+        },
+        {
+          "key": "responsible",
+          "name": "负责人原文",
+          "type": "text",
+          "required": false,
+          "notes": "按各表表头识别S/T列；不固定某个字母为负责人"
+        },
+        {
+          "key": "spares_raw",
+          "name": "备品要求原文",
+          "type": "text",
+          "required": false,
+          "notes": "S列仅部分表是备品，数值0.02的单位/口径待确认"
+        },
+        {
+          "key": "fulfillment",
+          "name": "提货及交付记录",
+          "type": "linkMany",
+          "required": false,
+          "notes": "提货与客户交付是不同事件",
+          "target": "fulfillment"
+        },
+        {
+          "key": "followups",
+          "name": "跟进记录",
+          "type": "linkMany",
+          "required": false,
+          "notes": "逐次记录，避免月度备注覆盖",
+          "target": "followups"
+        },
+        {
+          "key": "review_state",
+          "name": "数据核对状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "未核对/需核对/已核对"
+        },
+        {
+          "key": "source_row",
+          "name": "来源行",
+          "type": "linkOne",
+          "required": true,
+          "notes": "精确回溯到原文件及行",
+          "target": "import_rows"
+        }
+      ],
+      "rules": [
+        "已提货表示渠道业务从基地/仓库提走；不等于国际发运或客户签收。",
+        "初始历史数量和状态均保留，22条状态与数量冲突的行不能自动闭环。",
+        "全部96行可精确匹配料号；其中1行品牌不一致，需要复核后确认产品链接。"
+      ]
+    },
+    {
+      "key": "fulfillment",
+      "name": "提货及交付记录",
+      "phase": 1,
+      "grain": "一次有明确类型、日期和数量的实物流转事件；允许同明细分批发生。",
+      "fields": [
+        {
+          "key": "event_key",
+          "name": "事件编码",
+          "type": "text",
+          "required": true,
+          "notes": "稳定唯一编码，重复导入凭据不得重复累计"
+        },
+        {
+          "key": "line",
+          "name": "订单明细",
+          "type": "linkOne",
+          "required": true,
+          "notes": "每次事件明确落到一个需求/订单行",
+          "target": "order_lines"
+        },
+        {
+          "key": "event_type",
+          "name": "事件类型",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "基地仓库提货/退回基地仓库/国际发运/客户签收/历史修正"
+        },
+        {
+          "key": "event_date",
+          "name": "发生日期",
+          "type": "date",
+          "required": true,
+          "notes": "实际日期，不用计划日期代替"
+        },
+        {
+          "key": "quantity",
+          "name": "数量",
+          "type": "integer",
+          "required": true,
+          "notes": "普通流转数量为正；修正需明确增减方向和原因"
+        },
+        {
+          "key": "evidence",
+          "name": "凭据",
+          "type": "attachment",
+          "required": false,
+          "notes": "提货单/物流凭据/签收单"
+        },
+        {
+          "key": "confirmed",
+          "name": "已确认",
+          "type": "checkbox",
+          "required": true,
+          "notes": "未确认事件不进入数量汇总"
+        },
+        {
+          "key": "voided",
+          "name": "已作废",
+          "type": "checkbox",
+          "required": true,
+          "notes": "作废后不参与汇总，保留历史记录"
+        },
+        {
+          "key": "pickup_delta",
+          "name": "提货增量",
+          "type": "formula",
+          "required": false,
+          "notes": "已确认且未作废：提货+数量、退回-数量；国际发运和客户签收计0；修正经审核"
+        },
+        {
+          "key": "notes",
+          "name": "备注",
+          "type": "longText",
+          "required": false,
+          "notes": "不得从含糊的历史文本自动生成带日期/数量的事件"
+        }
+      ],
+      "rules": [
+        "只有期初截点之后的新事件计入后续增量，避免历史与新增重复。",
+        "客户签收不再次增加已提货数量。"
+      ]
+    },
+    {
+      "key": "followups",
+      "name": "跟进记录",
+      "phase": 1,
+      "grain": "一条业务备注、提货文字记录或交付文字记录；历史备注可没有精确日期。",
+      "fields": [
+        {
+          "key": "note_key",
+          "name": "记录编码",
+          "type": "text",
+          "required": true,
+          "notes": "来源文件+行+列或合并区域构成来源键"
+        },
+        {
+          "key": "lines",
+          "name": "关联明细",
+          "type": "linkMany",
+          "required": true,
+          "notes": "源合并单元格的一条共享备注可关联多条明细",
+          "target": "order_lines"
+        },
+        {
+          "key": "note_type",
+          "name": "记录类型",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "业务提货记录原文/客户交付记录原文/备注/负责人说明"
+        },
+        {
+          "key": "body",
+          "name": "记录内容",
+          "type": "longText",
+          "required": true,
+          "notes": "保留原文，不自动解析为已确认实物流转"
+        },
+        {
+          "key": "recorded_date",
+          "name": "业务记录日期",
+          "type": "date",
+          "required": false,
+          "notes": "未知时为空；系统创建时间仅表示导入时间"
+        },
+        {
+          "key": "source_period",
+          "name": "原备注期间",
+          "type": "text",
+          "required": false,
+          "notes": "保留9月备注、10月更新等原表头，不擅自补年度"
+        },
+        {
+          "key": "source_row",
+          "name": "来源行",
+          "type": "linkOne",
+          "required": false,
+          "notes": "支持共享合并区域来源",
+          "target": "import_rows"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "import_batches",
+      "name": "导入批次",
+      "phase": 1,
+      "grain": "一次被明确接收的源文件快照，不等于业务订单批次。",
+      "fields": [
+        {
+          "key": "batch_key",
+          "name": "导入编码",
+          "type": "text",
+          "required": true,
+          "notes": "内部唯一键"
+        },
+        {
+          "key": "filename",
+          "name": "源文件名",
+          "type": "text",
+          "required": true,
+          "notes": "只保存文件名；源原件在受控存储保存"
+        },
+        {
+          "key": "sha256",
+          "name": "文件SHA256",
+          "type": "text",
+          "required": true,
+          "notes": "同内容重复导入可识别"
+        },
+        {
+          "key": "imported_at",
+          "name": "导入时间",
+          "type": "dateTime",
+          "required": true,
+          "notes": "系统时间，与业务时间分开"
+        },
+        {
+          "key": "mapping_version",
+          "name": "映射版本",
+          "type": "text",
+          "required": true,
+          "notes": "固定版本便于重放/回滚"
+        },
+        {
+          "key": "state",
+          "name": "状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "预检/待核对/已导入/失败/已回滚"
+        },
+        {
+          "key": "source_attachment",
+          "name": "源文件",
+          "type": "attachment",
+          "required": false,
+          "notes": "仅受限权限保存，凭据页不进入业务表"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "import_rows",
+      "name": "来源行",
+      "phase": 1,
+      "grain": "一个文件快照中的一条业务源行；不收入隐藏凭据页。",
+      "fields": [
+        {
+          "key": "row_key",
+          "name": "来源键",
+          "type": "text",
+          "required": true,
+          "notes": "sha256+sheet+row，技术唯一键；不是稳定业务主键"
+        },
+        {
+          "key": "batch",
+          "name": "导入批次",
+          "type": "linkOne",
+          "required": true,
+          "notes": "唯一来源快照",
+          "target": "import_batches"
+        },
+        {
+          "key": "sheet",
+          "name": "工作表",
+          "type": "text",
+          "required": true,
+          "notes": "原工作表名称"
+        },
+        {
+          "key": "row_number",
+          "name": "原行号",
+          "type": "integer",
+          "required": true,
+          "notes": "Excel实际行号，不能使用源序号作唯一键"
+        },
+        {
+          "key": "raw_business_values",
+          "name": "业务原值",
+          "type": "longText",
+          "required": true,
+          "notes": "白名单业务列JSON，禁用整行无差别抓取"
+        },
+        {
+          "key": "formula_metadata",
+          "name": "公式及缓存说明",
+          "type": "longText",
+          "required": false,
+          "notes": "保留公式/缓存/缺失状态，公式不作为业务值执行"
+        },
+        {
+          "key": "review_state",
+          "name": "核对状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "通过/待核对/隔离/已解决"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "review_issues",
+      "name": "待核对事项",
+      "phase": 1,
+      "grain": "一个可追溯的数据冲突或缺失问题；修正可审计。",
+      "fields": [
+        {
+          "key": "issue_key",
+          "name": "问题编码",
+          "type": "text",
+          "required": true,
+          "notes": "来源键+规则版本+问题类型，避免重复生成"
+        },
+        {
+          "key": "source_row",
+          "name": "来源行",
+          "type": "linkOne",
+          "required": true,
+          "notes": "问题原始出处",
+          "target": "import_rows"
+        },
+        {
+          "key": "issue_type",
+          "name": "问题类型",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "公式无缓存/条码校验/品牌冲突/重复料号多码/状态数量冲突/缺少料号/疑似字符混用"
+        },
+        {
+          "key": "description",
+          "name": "说明",
+          "type": "longText",
+          "required": true,
+          "notes": "原值与建议分开，未经确认不改原值"
+        },
+        {
+          "key": "state",
+          "name": "处理状态",
+          "type": "singleSelect",
+          "required": true,
+          "notes": "未处理/处理中/已确认/已修正/暂缓"
+        },
+        {
+          "key": "resolution",
+          "name": "处理结论",
+          "type": "longText",
+          "required": false,
+          "notes": "记录核对人和依据，保留修正历史"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "usb_pid",
+      "name": "USB PID台账",
+      "phase": 2,
+      "grain": "一个VID/PID用途分配；产品型号级资料不能直接当成料号级唯一键。",
+      "fields": [
+        {
+          "key": "pid_key",
+          "name": "分配编码",
+          "type": "text",
+          "required": true,
+          "notes": "稳定分配键"
+        },
+        {
+          "key": "vid_hex",
+          "name": "VID十六进制",
+          "type": "text",
+          "required": false,
+          "notes": "保留原文，不未经确认当十进制数转换"
+        },
+        {
+          "key": "pid_hex",
+          "name": "PID十六进制",
+          "type": "text",
+          "required": true,
+          "notes": "保留0；规范化和补位需要确认"
+        },
+        {
+          "key": "brand",
+          "name": "品牌",
+          "type": "singleSelect",
+          "required": false,
+          "notes": "原B列"
+        },
+        {
+          "key": "category",
+          "name": "品类",
+          "type": "text",
+          "required": false,
+          "notes": "原C列"
+        },
+        {
+          "key": "model",
+          "name": "型号原文",
+          "type": "text",
+          "required": true,
+          "notes": "原D列，不能只凭名称自动匹配SKU"
+        },
+        {
+          "key": "products",
+          "name": "相关SKU",
+          "type": "linkMany",
+          "required": false,
+          "notes": "经过验证后才能关联，可能覆盖多个SKU",
+          "target": "products"
+        },
+        {
+          "key": "status",
+          "name": "研发状态",
+          "type": "text",
+          "required": false,
+          "notes": "原F列"
+        },
+        {
+          "key": "firmware_upgrade",
+          "name": "是否需要升级固件",
+          "type": "text",
+          "required": false,
+          "notes": "原G列"
+        },
+        {
+          "key": "driver_compatibility",
+          "name": "旧驱动兼容情况",
+          "type": "text",
+          "required": false,
+          "notes": "原H列"
+        }
+      ],
+      "rules": []
+    }
+  ],
+  "views": [
+    {
+      "table": "order_lines",
+      "name": "全部需求及订单",
+      "group_by": [
+        "market",
+        "workflow_stage"
+      ]
+    },
+    {
+      "table": "order_lines",
+      "name": "待提货",
+      "filter": "opening_confirmed=true AND pending_pickup_qty>0"
+    },
+    {
+      "table": "order_lines",
+      "name": "计划交付月度",
+      "group_by": [
+        "planned_date:month",
+        "market"
+      ],
+      "unknown_dates": "独立未排期组"
+    },
+    {
+      "table": "order_lines",
+      "name": "仅确认订单",
+      "filter": "demand_stage=确认订单"
+    },
+    {
+      "table": "order_lines",
+      "name": "待核对",
+      "filter": "review_state!=已核对"
+    },
+    {
+      "table": "products",
+      "name": "按品牌及品类",
+      "group_by": [
+        "brand",
+        "category_group",
+        "category_detail"
+      ]
+    },
+    {
+      "table": "barcodes",
+      "name": "条码分配与核对",
+      "group_by": [
+        "allocation_state",
+        "validation_state"
+      ]
+    }
+  ],
+  "implementation_notes": [
+    "Create tables/fields through Teable UI/API so application metadata stays consistent.",
+    "Link target IDs, actual formula syntax, rollup settings and permissions are resolved during implementation.",
+    "Constraints in this draft must be implemented and tested; merely listing a rule does not enforce it.",
+    "Do not import raw workbooks, private profiles, customer records or credentials into Git."
+  ]
+}
