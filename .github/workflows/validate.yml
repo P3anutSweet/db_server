@@ -40,7 +40,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate storage and backup programs
         run: |
-          python3 -m py_compile scripts/setup-storage.py scripts/backup-server.py
+          python3 -m py_compile scripts/setup-storage.py scripts/backup-server.py scripts/deploy-teable.py scripts/teable-export.py scripts/teable-mount-check.py scripts/validate-teable-compose.py tools/schema/*.py
           python3 scripts/setup-storage.py --help
+          python3 scripts/deploy-teable.py
           python3 -m unittest discover -s tests -v
           systemd-analyze calendar '*-*-* 03:00:00 Asia/Shanghai'
+      - name: Validate isolated Compose configuration
+        run: python3 scripts/validate-teable-compose.py
+      - name: Validate review-only schema and generated field dictionary
+        run: |
+          python3 tools/schema/build_design.py
+          git diff --exit-code -- schema/teable-design.json docs/database-design/FIELD_DICTIONARY.md
