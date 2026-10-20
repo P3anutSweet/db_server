@@ -1,11 +1,13 @@
 {
-  "version": "research-draft-2026-10-20-v2",
+  "version": "research-draft-2026-10-20-v2.1",
   "status": "review_only",
   "supersedes": "draft-2026-10-20-v1",
   "execution": "Logical model and required business controls; not a Teable API request or live migration.",
   "confirmed_rules": [
     "订单批次是业务渠道下单编号，一个批次可以有多个SKU，跨越多个月份，实际提货时间不固定。",
-    "已提货表示渠道业务从基地/仓库实际提走，不能当成国际发运或客户签收。"
+    "已提货表示渠道业务从基地/仓库实际提走，不能当成国际发运或客户签收。",
+    "市场按欧洲、东南亚、南美三个业务大区管理，大区下分地区市场，市场下有不同客户。",
+    "需要客户偏好记录（如性价比、RGB灯效）及用于产品归类的标签。"
   ],
   "modeling_decisions": [
     "向基地提交预测的状态与渠道是否已经下单分开；具体业务节点仍待核对。"
@@ -44,6 +46,320 @@
   ],
   "tables": [
     {
+      "key": "regions",
+      "name": "业务大区",
+      "group": "business",
+      "grain": "一个业务管理大区；目前为欧洲、东南亚、南美。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "大区编码",
+          "type": "text",
+          "notes": "稳定唯一编码，不按名称变化新建"
+        },
+        {
+          "key": "name",
+          "name": "大区名称",
+          "type": "text",
+          "notes": "欧洲/东南亚/南美；采用用户的业务分组"
+        },
+        {
+          "key": "active",
+          "name": "启用",
+          "type": "checkbox",
+          "notes": "停用不删除历史引用"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "markets",
+      "name": "地区市场",
+      "group": "business",
+      "grain": "一个经确认的地区市场；不是客户或业务渠道。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "市场编码",
+          "type": "text",
+          "notes": "稳定唯一编码"
+        },
+        {
+          "key": "name",
+          "name": "市场名称",
+          "type": "text",
+          "notes": "如波兰、巴西、越南；示例不是本次新增的真实记录"
+        },
+        {
+          "key": "region",
+          "name": "业务大区",
+          "type": "linkOne",
+          "notes": "正常归属一个业务大区；来源冲突时暂空并待核对",
+          "target": "regions"
+        },
+        {
+          "key": "owner",
+          "name": "市场负责人",
+          "type": "user",
+          "notes": "业务负责人"
+        },
+        {
+          "key": "active",
+          "name": "启用",
+          "type": "checkbox",
+          "notes": "历史市场不删除"
+        }
+      ],
+      "rules": [
+        "市场的大区来自确认的业务归属，不强按地理位置或旧工作表括号标签推断。"
+      ]
+    },
+    {
+      "key": "customers",
+      "name": "客户档案",
+      "group": "business",
+      "grain": "一个可识别的业务客户；同一客户可以服务多个市场。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "客户编码",
+          "type": "text",
+          "notes": "稳定唯一编码；名称不是唯一键"
+        },
+        {
+          "key": "name",
+          "name": "客户名称",
+          "type": "text",
+          "notes": "公司或业务客户的正式名称"
+        },
+        {
+          "key": "markets",
+          "name": "经营市场",
+          "type": "linkMany",
+          "notes": "通常一个市场；跨市场同一客户复用档案，各市场下均可查看",
+          "target": "markets"
+        },
+        {
+          "key": "owner",
+          "name": "客户负责人",
+          "type": "user",
+          "notes": "负责跟进的业务人员"
+        },
+        {
+          "key": "state",
+          "name": "合作状态",
+          "type": "singleSelect",
+          "notes": "潜在/合作中/暂停/停止"
+        },
+        {
+          "key": "notes",
+          "name": "客户说明",
+          "type": "longText",
+          "notes": "公司背景等；结构化偏好另记"
+        }
+      ],
+      "rules": [
+        "客户不等同地区市场，也不凭渠道名称自动生成。",
+        "同名不自动合并，跨市场确认为同一客户才复用；市场未确认时留待核对。"
+      ]
+    },
+    {
+      "key": "tags",
+      "name": "标签字典",
+      "group": "business",
+      "grain": "一个可复用的标签概念；客户偏好与产品标注使用同一字典。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "code",
+          "name": "标签编码",
+          "type": "text",
+          "notes": "稳定唯一编码，避免RGB/RGB灯效等重复概念"
+        },
+        {
+          "key": "name",
+          "name": "标签名称",
+          "type": "text",
+          "notes": "如性价比、RGB灯效、简约外观、无线连接"
+        },
+        {
+          "key": "group",
+          "name": "标签分类",
+          "type": "singleSelect",
+          "notes": "产品定位/灯效外观/连接方式/使用场景/功能体验等"
+        },
+        {
+          "key": "definition",
+          "name": "定义及标注标准",
+          "type": "longText",
+          "notes": "性价比等主观定位须说明依据和适用范围"
+        },
+        {
+          "key": "aliases",
+          "name": "别名",
+          "type": "longText",
+          "notes": "便于搜索和迁移；不另建同义标签"
+        },
+        {
+          "key": "applicable_to",
+          "name": "可用于",
+          "type": "multipleSelect",
+          "notes": "客户偏好/产品标注；不是所有偏好都可作为产品事实"
+        },
+        {
+          "key": "active",
+          "name": "启用",
+          "type": "checkbox",
+          "notes": "停用保留历史，默认不供新标注选择"
+        }
+      ],
+      "rules": []
+    },
+    {
+      "key": "customer_preferences",
+      "name": "客户偏好",
+      "group": "business",
+      "grain": "一个客户在指定市场、品类下对某标签的一条偏好版本。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "customer",
+          "name": "客户",
+          "type": "linkOne",
+          "notes": "偏好归属客户",
+          "target": "customers"
+        },
+        {
+          "key": "market",
+          "name": "适用市场",
+          "type": "linkOne",
+          "notes": "可空表示该客户全部经营市场；有值时必须属于其经营市场",
+          "target": "markets"
+        },
+        {
+          "key": "category_scope",
+          "name": "适用品类",
+          "type": "singleSelect",
+          "notes": "可空表示全品类；与SKU主品类共用受控选项"
+        },
+        {
+          "key": "tag",
+          "name": "偏好标签",
+          "type": "linkOne",
+          "notes": "只能选允许用于客户偏好的标签",
+          "target": "tags"
+        },
+        {
+          "key": "stance",
+          "name": "偏好方向",
+          "type": "singleSelect",
+          "notes": "偏好/必须具备/避开"
+        },
+        {
+          "key": "priority",
+          "name": "重要程度",
+          "type": "singleSelect",
+          "notes": "高/中/低；同一客户可有多个高优先偏好"
+        },
+        {
+          "key": "basis",
+          "name": "依据",
+          "type": "longText",
+          "notes": "客户反馈/业务观察/历史订单等；未核实推测须注明"
+        },
+        {
+          "key": "confirmed_on",
+          "name": "最近核实日期",
+          "type": "date",
+          "notes": "缺失不冒充已核实"
+        },
+        {
+          "key": "valid_from",
+          "name": "生效日期",
+          "type": "date",
+          "notes": "可空表示未知"
+        },
+        {
+          "key": "valid_to",
+          "name": "失效日期",
+          "type": "date",
+          "notes": "可空表示未设结束日，不能早于生效日期"
+        },
+        {
+          "key": "state",
+          "name": "状态",
+          "type": "singleSelect",
+          "notes": "待核实/有效/已替代/已失效"
+        },
+        {
+          "key": "owner",
+          "name": "记录负责人",
+          "type": "user",
+          "notes": "负责核实和维护"
+        }
+      ],
+      "rules": [
+        "同一客户/市场范围/品类范围/标签同一时点仅一条有效偏好；变更保留历史。",
+        "不把某客户偏好扩散给该地区所有客户；空白表示未知，不表示不喜欢。",
+        "市场或品类特定记录与通用记录冲突时提示核对，不能隐式覆盖或自动推荐。"
+      ]
+    },
+    {
+      "key": "product_tags",
+      "name": "产品标签",
+      "group": "business",
+      "grain": "一个SKU与一个标签的标注关系；保存依据与核实状态。",
+      "primary_key": "immutable record ID",
+      "fields": [
+        {
+          "key": "sku",
+          "name": "产品SKU",
+          "type": "linkOne",
+          "notes": "正式料号级别，不能只按相似型号推广",
+          "target": "skus"
+        },
+        {
+          "key": "tag",
+          "name": "产品标签",
+          "type": "linkOne",
+          "notes": "只能选允许用于产品标注的标签",
+          "target": "tags"
+        },
+        {
+          "key": "state",
+          "name": "核实状态",
+          "type": "singleSelect",
+          "notes": "待核实/已确认/已停用"
+        },
+        {
+          "key": "basis",
+          "name": "标注依据",
+          "type": "longText",
+          "notes": "规格书/实测/定位审核等；不能只凭名称猜RGB或无线"
+        },
+        {
+          "key": "confirmed_on",
+          "name": "最近核实日期",
+          "type": "date",
+          "notes": "确认后填写，不冒充产品发布日期"
+        },
+        {
+          "key": "owner",
+          "name": "维护人",
+          "type": "user",
+          "notes": "负责核实产品特点"
+        }
+      ],
+      "rules": [
+        "同SKU同标签只有一条当前有效标注；待核实不参与已确认产品筛选。",
+        "主品类仍单独管理，标签可多选；接口、尺寸、装量等精确规格保留结构化字段。",
+        "性价比是有依据的定位判断，不从低价格或客户偏好自动生成。"
+      ]
+    },
+    {
       "key": "channels",
       "name": "业务渠道",
       "group": "business",
@@ -63,16 +379,18 @@
           "notes": "用户确认的渠道名称"
         },
         {
-          "key": "market",
-          "name": "市场",
-          "type": "singleSelect",
-          "notes": "来自已核对的市场，不凭市场自动生成渠道"
+          "key": "markets",
+          "name": "覆盖市场",
+          "type": "linkMany",
+          "notes": "已核对的业务范围，不凭市场自动生成渠道",
+          "target": "markets"
         },
         {
-          "key": "customer_name",
-          "name": "客户名称待核对",
-          "type": "text",
-          "notes": "可为空；客户公司主数据以后单独规范"
+          "key": "customers",
+          "name": "服务客户",
+          "type": "linkMany",
+          "notes": "经确认的客户关系；不强制渠道等于某客户",
+          "target": "customers"
         },
         {
           "key": "owner",
@@ -125,6 +443,12 @@
           "name": "原品类及业务标签",
           "type": "multipleSelect",
           "notes": "全部保留原标记"
+        },
+        {
+          "key": "confirmed_tags",
+          "name": "已确认产品标签",
+          "type": "derived",
+          "notes": "来自产品标签表的已确认且启用标签；界面展示及筛选"
         },
         {
           "key": "base_uom",
@@ -330,6 +654,20 @@
           "target": "channels"
         },
         {
+          "key": "default_market",
+          "name": "默认地区市场",
+          "type": "linkOne",
+          "notes": "录入明细时预填；实际统计按明细市场，大区沿市场查询",
+          "target": "markets"
+        },
+        {
+          "key": "default_customer",
+          "name": "默认客户",
+          "type": "linkOne",
+          "notes": "录入明细时预填；未知可空，不用市场名冒充客户",
+          "target": "customers"
+        },
+        {
           "key": "placed_date",
           "name": "渠道下单日期",
           "type": "date",
@@ -364,7 +702,9 @@
       "rules": [
         "默认唯一范围为渠道+批次号；是否全公司唯一仍待确认。",
         "月份和SKU都不是批次主键的一部分；更改排期不新建同一订单。",
-        "正式渠道订单和向基地提交预测是独立过程。"
+        "正式渠道订单和向基地提交预测是独立过程。",
+        "批次归属于渠道，客户和市场以明细归属为准，默认值变更不回写已确认明细。",
+        "不能把整个渠道批次的数量重复归给每个客户或地区市场。"
       ]
     },
     {
@@ -393,6 +733,20 @@
           "type": "linkOne",
           "notes": "确认后必填",
           "target": "skus"
+        },
+        {
+          "key": "market",
+          "name": "地区市场",
+          "type": "linkOne",
+          "notes": "实际业务归属；未知待核对。客户/市场统计以明细为粒度",
+          "target": "markets"
+        },
+        {
+          "key": "customer",
+          "name": "客户",
+          "type": "linkOne",
+          "notes": "可由主单预填并确认；未知待核对，不用渠道或市场冒充",
+          "target": "customers"
         },
         {
           "key": "description_snapshot",
@@ -482,7 +836,8 @@
       ],
       "rules": [
         "同一SKU不同交期通常属于同一明细的多个计划；不能靠源行号生成新业务身份。",
-        "是否合并相同SKU须先确认交易要求、单位和源数量不是重复快照。"
+        "是否合并相同SKU须先确认客户、市场、交易要求、单位和源数量不是重复快照。",
+        "已知客户时明细市场须属于客户经营市场；同SKU服务不同客户或市场时分行记录。"
       ]
     },
     {
@@ -1015,7 +1370,7 @@
           "key": "kind",
           "name": "问题类型",
           "type": "singleSelect",
-          "notes": "条码/料号/批次/品牌/计划节点/状态数量等"
+          "notes": "条码/料号/批次/品牌/计划节点/状态数量/市场归属/客户身份/标签偏好等"
         },
         {
           "key": "state",
@@ -1033,6 +1388,71 @@
       "rules": []
     }
   ],
+  "region_seeds": [
+    {
+      "code": "EU",
+      "name": "欧洲"
+    },
+    {
+      "code": "SEA",
+      "name": "东南亚"
+    },
+    {
+      "code": "SA",
+      "name": "南美"
+    }
+  ],
+  "tag_examples": [
+    {
+      "code": "VALUE_FOR_MONEY",
+      "name": "性价比",
+      "group": "产品定位",
+      "applicable_to": [
+        "客户偏好",
+        "产品标注"
+      ],
+      "definition": "定位判断；须记录比较范围和业务依据，不能等同低价。"
+    },
+    {
+      "code": "RGB_LIGHTING",
+      "name": "RGB灯效",
+      "group": "灯效外观",
+      "applicable_to": [
+        "客户偏好",
+        "产品标注"
+      ],
+      "definition": "客户可表达喜好或避开；产品须经规格/实测核实。"
+    },
+    {
+      "code": "MINIMAL_DESIGN",
+      "name": "简约外观",
+      "group": "灯效外观",
+      "applicable_to": [
+        "客户偏好",
+        "产品标注"
+      ],
+      "definition": "候选标签，标注标准需经审核。"
+    },
+    {
+      "code": "WIRELESS",
+      "name": "无线连接",
+      "group": "连接方式",
+      "applicable_to": [
+        "客户偏好",
+        "产品标注"
+      ],
+      "definition": "产品有可用无线连接；具体协议仍由规格字段表达。"
+    }
+  ],
+  "example_policy": "Tag examples are candidate vocabulary, not assertions about any real customer or SKU. Region seeds reflect confirmed business groups; no live records are created.",
+  "classification_requirements": [
+    "地区市场归属业务大区；未知或源分组冲突先核对，尤其不能把香港强塞入东南亚。",
+    "客户有稳定身份，可覆盖多个市场；客户偏好可限定市场及品类，不能从地域自动继承。",
+    "订单市场/客户/渠道需要一致性校验；不得凭空为历史订单创建客户。",
+    "标签字典统一概念；客户偏好方向/权重与产品事实分别保存，未知不等同不具备。",
+    "Product/customer tag scope, current preference uniqueness, active dates and evidence state must be validated during implementation; this contract does not enforce live writes.",
+    "标签用于查找候选；实际报价、规格、库存与交付需另行核实，不提供未经验证的自动匹配分数。"
+  ],
   "posting_requirements": [
     "Posting requires one atomic/idempotent controlled write path; a Teable rollup alone is not an ERP posting engine.",
     "Check document state, matching channel/SKU/UOM, exact allocation totals and remaining order allowance at posting time.",
@@ -1044,7 +1464,7 @@
   "optional_later_modules": [
     "型号系列与变体属性规范",
     "海外发运与客户签收单据",
-    "正式客户/地址主数据",
+    "客户多地址及联系人扩展",
     "USB VID/PID用途台账",
     "价格币种、开票和收款对接",
     "独立意向需求/预测转单（如实际存在该流程）"
@@ -1055,6 +1475,9 @@
     "实际退回后补提还是不再补提",
     "数量单位和箱规换算",
     "历史期初数量和关闭余量",
-    "渠道与客户公司的对应关系"
+    "渠道与客户公司的对应关系",
+    "各地区市场的大区归属及香港等旧分组冲突",
+    "真实客户名单与经营市场",
+    "标签定义、产品核实依据及客户偏好初始资料"
   ]
 }
