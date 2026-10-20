@@ -11,6 +11,8 @@ business tables and records have not been imported. The confirmed quantity termi
 goods picked up by channel staff from the base/warehouse, tracked separately from customer delivery.
 The [revised V2 model](docs/database-design/V2_MODEL.md) treats a channel order batch as one order number spanning
 multiple SKUs and months. Monthly plans and actual pickup documents are separate; pickup dates need not be fixed in advance.
+The [market and tag extension](docs/database-design/MARKETS_AND_TAGS.md) adds business regions, local markets,
+customers, scoped customer preferences and verified SKU tags using a shared tag dictionary.
 
 Storage provisioning on `thunderobotdb` completed and was verified on **2026-10-20**.
 The NVMe SSD has a **200GiB logical volume mounted at `/srv/db`** (about 194GiB available).
