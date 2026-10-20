@@ -176,7 +176,8 @@ table('usb_pid', 'USB PID台账', '一个VID/PID用途分配；产品型号级�
     ('driver_compatibility', '旧驱动兼容情况', 'text', False, '原H列'),
 ], phase=2)
 
-DESIGN = {'version': 'draft-2026-10-20-v1', 'status': 'review_only', 'base_name': '外设产品与海外订单',
+DESIGN = {'version': 'draft-2026-10-20-v1', 'status': 'superseded',
+          'superseded_by': 'teable-model-v2.json', 'base_name': '外设产品与海外订单',
           'execution': 'Logical design contract only; not a Teable API request or PostgreSQL migration.',
           'confirmed_terms': {'source_M_已发货': '渠道业务已从基地或仓库提走的数量；新字段名已提货',
                               'source_N_待发货': '新字段名待提货；客户实际交付独立记录'},
@@ -217,7 +218,9 @@ def main():
     path = ROOT / 'schema/teable-design.json'
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(DESIGN, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    lines = ['# 字段字典草案', '', '版本：`draft-2026-10-20-v1`。这是待审阅的逻辑结构，不会直接创建表或修改数据库。',
+    lines = ['# V1字段字典（已被替代）', '',
+             '历史设计，仅供追溯。后续实施使用 [V2模型](V2_MODEL.md) 和 [V2字段字典](V2_FIELD_DICTIONARY.md)。', '',
+             '版本：`draft-2026-10-20-v1`。不会直接创建表或修改数据库。',
              '', '用户已确认：原表“已发货”指渠道业务从基地/仓库提走，统一改为“已提货”；“待发货”改为“待提货”。', '']
     for t in TABLES:
         lines += [f'## {t["name"]}' + ('（第二阶段）' if t['phase'] == 2 else ''), '', t['grain'], '',
