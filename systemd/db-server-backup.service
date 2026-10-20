@@ -1,0 +1,15 @@
+[Unit]
+Description=Archive db_server configuration, logs and completed database exports
+RequiresMountsFor=/srv/db /srv/backups
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/db-server-backup
+User=root
+Group=root
+UMask=0077
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=6h
