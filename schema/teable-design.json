@@ -1,6 +1,7 @@
 {
   "version": "draft-2026-10-20-v1",
-  "status": "review_only",
+  "status": "superseded",
+  "superseded_by": "teable-model-v2.json",
   "base_name": "外设产品与海外订单",
   "execution": "Logical design contract only; not a Teable API request or PostgreSQL migration.",
   "confirmed_terms": {
