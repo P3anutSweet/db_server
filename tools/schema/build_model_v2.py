@@ -163,7 +163,7 @@ add('line_plans', '分月计划', '某条SKU明细在一个计划节点、期间
     ('planned_qty', '计划数量', 'decimal', '基础单位量，不是新增订单数量'),
     ('forecast_state', '基地预测提交状态', 'singleSelect', '未提交/部分提交/已提交/不适用'),
     ('submitted_date', '基地预测提交日期', 'date', '原J列对应节点先核对'),
-    ('state', '版本状态', 'singleSelect', '有效/已替代/已取消'),
+    ('state', '版本状态', 'singleSelect', '草稿/有效/已替代/已取消；来源计划未核对时为草稿'),
     ('supersedes', '替代旧计划', 'linkOne', '保留改期历史，不能让新旧版本同时计入', 'line_plans'),
     ('change_reason', '改期说明', 'longText', '记录原因'),
 ], ['待提交基地预测不等同渠道尚未下单。',
