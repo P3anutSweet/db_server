@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_*
+*.rdp
+backups/
+data/
+*.log
+.DS_Store
+Thumbs.db
+Server_screenshot/
