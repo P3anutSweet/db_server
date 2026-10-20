@@ -84,7 +84,7 @@ def main():
                         and not p.name.startswith(".") and not p.name.endswith((".partial", ".tmp"))]
             manifest = {"created_at": stamp, "database_engine": config.get("database_engine", "not_configured"),
                         "completed_export_files": exported,
-                        "database_recovery_status": "No database dump producer or restore test is configured yet",
+                        "database_recovery_status": config.get("database_recovery_status", "No database dump producer or restore test is configured yet"),
                         "scope": "System configuration, package list, last 24h journal, and completed files in /srv/db/exports"}
             (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
             hashes = []
@@ -102,7 +102,7 @@ def main():
             prune(DEST, int(config.get("retain_backups", 7)))
             print(f"Backup completed: {completed}")
             print(f"Completed database export files: {len(exported)}")
-            print("Database dump generation and restore testing are not configured yet.")
+            print(manifest["database_recovery_status"])
         except BaseException:
             # A failed run cannot become a completed backup or trigger retention deletion.
             if stage.exists() and stage.parent == DEST and stage.name == ".partial-" + stamp:
