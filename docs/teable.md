@@ -28,7 +28,8 @@ solely to generate this summary. The existing daily 03:00 Asia/Shanghai WDC time
 This installs the open-source Community edition using the official container, PostgreSQL 15 and Redis 7.4.
 It does not install the optional AI/App Builder runtime or activate paid features.
 The Windows chat is drafting the business structure from the two new Excel inputs independently;
-this deployment does not import business tables. Import the agreed design through Teable's supported UI/API later.
+the later [seven-market import](operations/2026-10-20-order-import.md) deployed the basic business tables and
+historical order ledger through the supported API. Formal reconciliation and controlled fulfillment posting remain pending.
 
 ## Deploy
 
