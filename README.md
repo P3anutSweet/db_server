@@ -88,6 +88,22 @@ Host db-server
 
 Then connect using `ssh db-server`. Keep SSH passwords enabled until key login is verified. For later hardening, use `/etc/ssh/sshd_config.d/`, validate with `sudo sshd -t`, inspect `sudo sshd -T`, and test a new connection while retaining the current session. Disabling SSH password authentication does not disable GNOME RDP authentication.
 
+## Chinese input and fonts with English menus
+
+Open **Language Support**, choose **Install / Remove Languages**, select **Chinese (simplified)** and apply. Authenticate at the Ubuntu password prompt. Keep **English** first in the menu-language list, and select **IBus** as the keyboard input method system.
+
+For a package-based installation, run these commands in an Ubuntu terminal:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ibus-libpinyin fonts-noto-cjk fonts-noto-cjk-extra
+im-config -n ibus
+```
+
+Sign out of the Ubuntu desktop and sign in again so the input framework and newly installed engines load. Then open **Settings → Keyboard → Add Input Source** and choose **Chinese (Intelligent Pinyin)**, usually under **Chinese (China)** or **Chinese (simplified)**. A plain **Chinese** keyboard layout is not the Pinyin conversion engine.
+
+Use the language indicator in the top bar to select Pinyin or English. GNOME's default input-source shortcut is **Super+Space**; in a remote session the top-bar menu avoids conflicts with Windows shortcuts. Test by typing `nihao` in a blank document and choosing the candidate **你好**. These steps add Chinese typing and font support without switching the desktop menus to Chinese.
+
 ## Availability and troubleshooting
 
 Keep the laptop on AC power and initially leave its lid open. Confirm it stays awake before relying on unattended access. Sleep, network loss, and a disk-encryption unlock prompt after reboot can interrupt access. Reserve both devices' addresses in the router's DHCP settings, or update connection details and firewall rules after address changes.
