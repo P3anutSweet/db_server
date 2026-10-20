@@ -11,3 +11,8 @@ data/
 .DS_Store
 Thumbs.db
 [Ss]erver_screenshot/
+__pycache__/
+*.py[cod]
+*.tar.gz
+*.dump
+*.sql
