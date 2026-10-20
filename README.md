@@ -7,7 +7,9 @@ Ubuntu database server with SSH, GNOME remote desktop and a running Teable Commu
 Teable Community is running at **http://192.168.32.84**. Health and login-page checks returned HTTP 200 from the Windows client.
 See [Teable installation, access and database backups](docs/teable.md) for execution records and operations.
 The [product and overseas-order structure](docs/database-design/README.md) is drafted from the two supplied Excel files;
-business tables and records have not been imported. The confirmed quantity terminology is **已提货 / 待提货**:
+the base tables and 96 historical ledger rows from the seven requested market sheets are now deployed.
+See the [import execution record and remaining review work](docs/operations/2026-10-20-order-import.md).
+The confirmed quantity terminology is **已提货 / 待提货**:
 goods picked up by channel staff from the base/warehouse, tracked separately from customer delivery.
 The [revised V2 model](docs/database-design/V2_MODEL.md) treats a channel order batch as one order number spanning
 multiple SKUs and months. Monthly plans and actual pickup documents are separate; pickup dates need not be fixed in advance.
@@ -22,7 +24,8 @@ UUID-based mounts are installed. Daily configuration/log/export backups run at *
 with up to five minutes of randomized delay, retaining the latest seven completed generations. The first backup succeeded.
 Teable's PostgreSQL export and isolated restore validation are now configured. The first Teable backup succeeded,
 and its PostgreSQL dump restored into a temporary database with 49 source and 49 restored tables.
-The earlier configuration-only backup remains historical; the business schema is still a draft.
+The earlier configuration-only backup remains historical. The basic business tables and historical ledger are deployed;
+formal batch/customer reconciliation, computed fulfillment fields and controlled posting remain unfinished.
 
 - [Storage setup, backup schedule and recovery](docs/storage.md)
 - [2026-10-20 inspection and execution status](docs/operations/2026-10-20-storage.md)
