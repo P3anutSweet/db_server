@@ -16,3 +16,6 @@ __pycache__/
 *.tar.gz
 *.dump
 *.sql
+*.token
+*state-private.json
+*import-private.json
