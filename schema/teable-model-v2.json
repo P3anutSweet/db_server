@@ -894,7 +894,7 @@
           "key": "state",
           "name": "版本状态",
           "type": "singleSelect",
-          "notes": "有效/已替代/已取消"
+          "notes": "草稿/有效/已替代/已取消；来源计划未核对时为草稿"
         },
         {
           "key": "supersedes",
