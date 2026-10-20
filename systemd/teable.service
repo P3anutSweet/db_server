@@ -1,0 +1,19 @@
+[Unit]
+Description=Teable community app, PostgreSQL and Redis
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+RequiresMountsFor=/srv/db
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/etc/teable
+ExecStartPre=/usr/bin/python3 /usr/local/sbin/teable-mount-check
+ExecStart=/usr/bin/docker compose --env-file .env -f compose.yaml up -d --wait --wait-timeout 600
+ExecStop=/usr/bin/docker compose --env-file .env -f compose.yaml stop
+TimeoutStartSec=12min
+TimeoutStopSec=2min
+
+[Install]
+WantedBy=multi-user.target
