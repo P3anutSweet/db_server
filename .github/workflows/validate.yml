@@ -1,4 +1,4 @@
-name: Validate remote access setup
+name: Validate server setup
 on:
   push:
   pull_request:
@@ -34,3 +34,13 @@ jobs:
             "$PWD/scripts/connect.ps1", [ref]$tokens, [ref]$parseErrors
           ) | Out-Null
           if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+  storage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate storage and backup programs
+        run: |
+          python3 -m py_compile scripts/setup-storage.py scripts/backup-server.py
+          python3 scripts/setup-storage.py --help
+          python3 -m unittest discover -s tests -v
+          systemd-analyze calendar '*-*-* 03:00:00 Asia/Shanghai'
