@@ -9,6 +9,8 @@ See [Teable installation, access and database backups](docs/teable.md) for execu
 The [product and overseas-order structure](docs/database-design/README.md) is drafted from the two supplied Excel files;
 business tables and records have not been imported. The confirmed quantity terminology is **已提货 / 待提货**:
 goods picked up by channel staff from the base/warehouse, tracked separately from customer delivery.
+The [revised V2 model](docs/database-design/V2_MODEL.md) treats a channel order batch as one order number spanning
+multiple SKUs and months. Monthly plans and actual pickup documents are separate; pickup dates need not be fixed in advance.
 
 Storage provisioning on `thunderobotdb` completed and was verified on **2026-10-20**.
 The NVMe SSD has a **200GiB logical volume mounted at `/srv/db`** (about 194GiB available).
