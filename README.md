@@ -4,15 +4,18 @@ Database-server project for an Ubuntu laptop. First milestone: SSH terminal acce
 
 ## Server storage
 
-SSH key access to `thunderobotdb` is verified. The prepared storage plan reserves **200GiB on the NVMe SSD for `/srv/db`**
-and uses the **1TB Western Digital disk for `/srv/backups`**. Applying the installer clears the WDC BitLocker partition.
-The procedure includes UUID-based mounts, daily configuration/log/export backups and execution records.
-Administrator execution is still required; this is not yet a verified live storage layout.
+Storage provisioning on `thunderobotdb` completed and was verified on **2026-10-20**.
+The NVMe SSD has a **200GiB logical volume mounted at `/srv/db`** (about 194GiB available).
+The **1TB Western Digital disk was cleared and formatted as ext4**, mounted at `/srv/backups`
+(about 916GiB available). The existing root volume remains 100GiB; about 173.9GiB remains unallocated in LVM.
+UUID-based mounts are installed. Daily configuration/log/export backups run at **03:00 Asia/Shanghai**,
+with up to five minutes of randomized delay, retaining the latest seven completed generations. The first backup succeeded.
+The database engine and consistent database dump production are not configured yet; the first backup contains no database exports.
 
 - [Storage setup, backup schedule and recovery](docs/storage.md)
 - [2026-10-20 inspection and execution status](docs/operations/2026-10-20-storage.md)
 
-Supported installer targets: **Ubuntu Server 24.04 and 26.04 LTS, initially without a GUI**. The installer adds Ubuntu's minimal GNOME desktop and GNOME Remote Desktop. Confirm the laptop's actual release with `cat /etc/os-release` before installation. Database selection, installation and backups follow after remote access is verified.
+Supported installer targets: **Ubuntu Server 24.04 and 26.04 LTS, initially without a GUI**. The installer adds Ubuntu's minimal GNOME desktop and GNOME Remote Desktop. Confirm the laptop's actual release with `cat /etc/os-release` before installation. Database selection, installation, consistent exports and restore testing remain the next database-specific steps.
 
 ## Get the repository onto Ubuntu
 
@@ -157,7 +160,7 @@ For later access outside the LAN, use a private VPN such as Tailscale. Do not fo
 
 ## Validation
 
-GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, and PowerShell parsing. It does not install GNOME or prove the physical laptop accepts connections. Verify SSH login, RDP login and availability on the real machines before marking the milestone complete.
+GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, PowerShell parsing, Python compilation, storage tests and the backup calendar expression. Eleven storage/backup tests passed on the Ubuntu server, and the installed mounts, successful first backup and active timer were verified. Tests cover hardware and mount guards, fstab preservation, archive verification and retention behavior. CI does not install GNOME or provision physical disks; connection and storage verification require the real machines. Database recovery is not verified until an engine, consistent exports and restore tests are configured.
 
 ## References
 
