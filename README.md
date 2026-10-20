@@ -106,6 +106,27 @@ sudo grdctl --system status
 
 For RDP failures, verify Remote Login is enabled, sign out of local GNOME, and inspect the journal. Install available Ubuntu updates before troubleshooting protocol issues. Avoid running xrdp on the same port.
 
+### Ubuntu 26.04: credentials are not set
+
+If the service log says `[RDP] Credentials are not set, denying client`, the server is rejecting connections because its system-level RDP credentials are missing. An enabled service and an open port do not prove that authentication is configured.
+
+Run this command **by itself** at the Ubuntu console, then answer its username and password prompts:
+
+```bash
+sudo grdctl --system rdp set-credentials
+```
+
+Do not paste subsequent commands until the prompts finish. Do not put the password in command arguments, shell history, screenshots, or Git. Choose a dedicated RDP password; the username can be the same as the Ubuntu username.
+
+After the command finishes, run:
+
+```bash
+sudo systemctl restart gnome-remote-desktop.service
+sudo grdctl --system status
+```
+
+Reconnect from Windows using the RDP credentials just saved, without a `MicrosoftAccount\\` prefix. If GDM then asks you to log in, use your regular Ubuntu account. The TPM warning saying `using GKeyFile as fallback` reports the alternative credential backend; the missing-credentials message is the relevant rejection in this case. See [Canonical's Ubuntu 26.04 RDP configuration instructions](https://ubuntu.com/aws/docs/aws-how-to/instances/launch-ubuntu-desktop/).
+
 For later access outside the LAN, use a private VPN such as Tailscale. Do not forward SSH, RDP or database ports through the router. Keep passwords, tokens, private keys, live data and backups out of Git.
 
 ## Validation
@@ -117,3 +138,4 @@ GitHub Actions checks Bash syntax, ShellCheck, invalid argument rejection, and P
 - [Ubuntu OpenSSH server](https://ubuntu.com/server/docs/how-to/security/openssh-server/)
 - [Ubuntu GNOME Remote Desktop](https://ubuntu.com/desktop/docs/en/latest/how-to/share-your-desktop-remotely/)
 - [Ubuntu 26.04 minimal desktop package](https://packages.ubuntu.com/resolute/ubuntu-desktop-minimal)
+
