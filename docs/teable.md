@@ -1,7 +1,12 @@
 # Teable on thunderobotdb
 
 Deployment status: **running; server-side LAN health and login page verified after Nginx restart**.
-Target URL: `http://192.168.32.84` from the Windows computer on the same LAN. SSH and RDP are not needed for everyday use.
+Current URL: `https://192.168.32.84`. HTTP redirects to HTTPS. SSH and RDP are not needed for everyday use.
+Nginx binds the server's LAN address on ports 80 and 443; the application remains on loopback port 3000.
+The configured LAN CA must be trusted on each client to avoid certificate warnings.
+The access rule permits `192.168.32.0/24` and the explicitly authorized client `192.168.35.131`.
+Network access does not grant database editing; Teable collaborators receive Viewer/Editor/Creator roles on the website.
+The earlier HTTP-only listener checks below are historical deployment records.
 
 Server review on 2026-10-20 (`TEABLE-SERVER-20261020-C`): all 19 storage/deployment/backup tests pass;
 standalone Compose 2.40.3 validation passes, including loopback-only port and persistent-mount checks.

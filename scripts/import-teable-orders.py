@@ -128,6 +128,8 @@ class Importer:
 
     def schema(self):
         state, api = self.state, self.api
+        if state.get('operations_version'):
+            raise ValueError('Database is maintained by refresh-order-operations.py; legacy import must not recreate removed modules.')
         if not state.get('base_id'):
             bases = api.call('GET', f'/space/{state["space_id"]}/base')
             if any(b['name'] == '外设海外订单' for b in bases):

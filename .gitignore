@@ -19,3 +19,7 @@ __pycache__/
 *.token
 *state-private.json
 *import-private.json
+*-private.json
+*.sqlite3
+*.sqlite3-*
+*automation.token

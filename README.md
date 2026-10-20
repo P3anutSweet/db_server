@@ -4,15 +4,18 @@ Ubuntu database server with SSH, GNOME remote desktop and a running Teable Commu
 
 ## Server storage
 
-Teable Community is running at **http://192.168.32.84**. Health and login-page checks returned HTTP 200 from the Windows client.
+Teable Community is running at **https://192.168.32.84**. HTTPS was verified using the server's public CA certificate.
 See [Teable installation, access and database backups](docs/teable.md) for execution records and operations.
 The [product and overseas-order structure](docs/database-design/README.md) is drafted from the two supplied Excel files;
 the base tables and 96 historical ledger rows from the seven requested market sheets are now deployed.
 See the [import execution record and remaining review work](docs/operations/2026-10-20-order-import.md).
 The confirmed quantity terminology is **已提货 / 待提货**:
 goods picked up by channel staff from the base/warehouse, tracked separately from customer delivery.
-The [revised V2 model](docs/database-design/V2_MODEL.md) treats a channel order batch as one order number spanning
-multiple SKUs and months. Monthly plans and actual pickup documents are separate; pickup dates need not be fixed in advance.
+The [current V3 structure](docs/database-design/V3_CURRENT.md) assigns each SKU order line its own country-scoped
+order number. Batches group lines across SKUs and months; batch names are not unique keys.
+Business forecasts belong to channel staff. The monthly overview compares business forecasts, actual orders,
+uncollected and collected quantities, plus USD estimates. Country counters and monthly aggregates refresh every minute.
+The former warehouse, packaging, allocation and pickup-document modules have been removed.
 The [market and tag extension](docs/database-design/MARKETS_AND_TAGS.md) adds business regions, local markets,
 customers, scoped customer preferences and verified SKU tags using a shared tag dictionary.
 
@@ -25,7 +28,7 @@ with up to five minutes of randomized delay, retaining the latest seven complete
 Teable's PostgreSQL export and isolated restore validation are now configured. The first Teable backup succeeded,
 and its PostgreSQL dump restored into a temporary database with 49 source and 49 restored tables.
 The earlier configuration-only backup remains historical. The basic business tables and historical ledger are deployed;
-formal batch/customer reconciliation, computed fulfillment fields and controlled posting remain unfinished.
+Some customer assignments and 29 real historical order dates remain unknown; no dates are invented to generate identifiers.
 
 - [Storage setup, backup schedule and recovery](docs/storage.md)
 - [2026-10-20 inspection and execution status](docs/operations/2026-10-20-storage.md)
