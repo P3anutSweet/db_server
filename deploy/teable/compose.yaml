@@ -1,0 +1,84 @@
+name: teable
+services:
+  app:
+    image: ${TEABLE_IMAGE:?image must be pinned by installer}
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    volumes:
+      - type: bind
+        source: /srv/db/teable/assets
+        target: /app/.assets
+        bind:
+          create_host_path: false
+    environment:
+      TZ: Asia/Shanghai
+      PUBLIC_ORIGIN: http://192.168.32.84
+      SECRET_KEY: ${SECRET_KEY:?required}
+      PRISMA_DATABASE_URL: postgresql://teable:${POSTGRES_PASSWORD:?required}@db:5432/teable
+      BACKEND_CACHE_PROVIDER: redis
+      BACKEND_CACHE_REDIS_URI: redis://default:${REDIS_PASSWORD:?required}@cache:6379/0
+      BACKEND_STORAGE_PROVIDER: local
+      BACKEND_STORAGE_ENCRYPTION_KEY: ${STORAGE_KEY:?required}
+      BACKEND_STORAGE_ENCRYPTION_IV: ${STORAGE_IV:?required}
+      BACKEND_MAIL_ENCRYPTION_KEY: ${MAIL_KEY:?required}
+      BACKEND_MAIL_ENCRYPTION_IV: ${MAIL_IV:?required}
+      BACKEND_ACCESS_TOKEN_ENCRYPTION_KEY: ${ACCESS_TOKEN_KEY:?required}
+      BACKEND_ACCESS_TOKEN_ENCRYPTION_IV: ${ACCESS_TOKEN_IV:?required}
+      BACKEND_DATA_DB_URL_ENCRYPTION_KEY: ${DATA_DB_KEY:?required}
+      BACKEND_DATA_DB_URL_ENCRYPTION_IV: ${DATA_DB_IV:?required}
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  db:
+    image: ${POSTGRES_IMAGE:?image must be pinned by installer}
+    restart: unless-stopped
+    shm_size: 256mb
+    volumes:
+      - type: bind
+        source: /srv/db/teable/postgres
+        target: /var/lib/postgresql/data
+        bind:
+          create_host_path: false
+    environment:
+      TZ: Asia/Shanghai
+      POSTGRES_USER: teable
+      POSTGRES_DB: teable
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U teable -d teable']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    logging: *logging
+  cache:
+    image: ${REDIS_IMAGE:?image must be pinned by installer}
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes', --requirepass, '${REDIS_PASSWORD:?required}']
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?required}
+    volumes:
+      - type: bind
+        source: /srv/db/teable/redis
+        target: /data
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    logging: *logging
