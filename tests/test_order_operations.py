@@ -10,6 +10,44 @@ spec.loader.exec_module(rules)
 
 
 class OperationsTests(unittest.TestCase):
+    def batch_row(self, **changes):
+        return {'market_name':'巴西', 'order_date':'2026-10-20', 'order_quantity':1000, **changes}
+
+    def test_batch_name_uses_region_date_country_and_linked_order_quantity(self):
+        result=rules.batch_name_details([self.batch_row(),self.batch_row(order_quantity=250)])
+        self.assertEqual(result['name'],'SA20261020BRA1250')
+        self.assertTrue(result['inferred_date'])
+
+    def test_batch_date_is_not_guessed_from_partial_or_multiple_dates(self):
+        for rows in [[self.batch_row(),self.batch_row(order_date=None)],
+                     [self.batch_row(),self.batch_row(order_date='2026-11-01')]]:
+            result=rules.batch_name_details(rows)
+            self.assertIsNone(result['date'])
+            self.assertIn('待补日期',result['name'])
+
+    def test_explicit_batch_date_supports_cross_month_orders_and_shanghai_time(self):
+        result=rules.batch_name_details([self.batch_row(),self.batch_row(order_date='2026-11-01')],
+            explicit_date='2026-10-19T16:00:00Z')
+        self.assertEqual(result['name'],'SA20261020BRA2000')
+        self.assertFalse(result['inferred_date'])
+
+    def test_batch_missing_quantity_is_not_a_partial_or_zero_total(self):
+        result=rules.batch_name_details([self.batch_row(),self.batch_row(order_quantity=None)])
+        self.assertIsNone(result['total'])
+        self.assertIn('待补件数',result['name'])
+        empty=rules.batch_name_details([],explicit_date='2026-10-20',default_market='巴西')
+        self.assertIsNone(empty['total'])
+
+    def test_mixed_countries_do_not_choose_an_arbitrary_batch_code(self):
+        result=rules.batch_name_details([self.batch_row(),self.batch_row(market_name='波兰')])
+        self.assertIn('待补国家',result['name'])
+        result=rules.batch_name_details([self.batch_row()],default_market='波兰')
+        self.assertIn('待补国家',result['name'])
+
+    def test_batch_quantity_changes_update_name_and_preserve_real_zero(self):
+        self.assertEqual(rules.batch_name_details([self.batch_row(order_quantity=0)])['name'],'SA20261020BRA0')
+        self.assertEqual(rules.batch_name_details([self.batch_row(order_quantity=1500)])['name'],'SA20261020BRA1500')
+
     def test_country_sequences_are_independent_and_persist(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as tmp:
             p = Path(tmp) / 'counter.db'

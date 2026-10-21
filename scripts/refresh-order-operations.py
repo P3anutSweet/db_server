@@ -21,7 +21,7 @@ if not RULES_PATH.exists():
 rules = runpy.run_path(str(RULES_PATH))
 COUNTRIES, CHANNEL_STATES, ADMIN_STATES = (rules[k] for k in ('COUNTRIES', 'CHANNEL_STATES', 'ADMIN_STATES'))
 MINIMAL_TABLES = {'markets', 'customers', 'tags', 'skus', 'order_batches', 'order_lines', 'monthly_overview'}
-LAYOUT_VERSION = '3.1'
+LAYOUT_VERSION = '3.2'
 
 
 def linked(value):
@@ -464,6 +464,18 @@ class Operations:
         print(json.dumps(report, ensure_ascii=False))
 
     def refresh_batches(self, orders, names):
+        if self.state.get('batch_name_version') != 'region-date-country-quantity-v1':
+            self.field('order_batches', 'placed_date', '批次下单日期', 'date',
+                {'formatting': {'date': 'YYYY-MM-DD', 'time': 'None', 'timeZone': 'Asia/Shanghai'}})
+            self.number('order_batches', 'quantity_input', '批次数量汇总（自动）', 2)
+            r = self.ref('order_batches', 'quantity_input')
+            self.formula('order_batches', 'total_quantity', '总件数',
+                         f'IF(COUNTA({r})=0,BLANK(),{r})')
+            self.link('order_batches', 'orders', '关联订单', 'order_lines', True)
+            self.field('order_batches', 'naming_note', '命名提示')
+            self.state['batch_name_version'] = 'region-date-country-quantity-v1'
+            self.state.pop('operations_layout_version', None)
+            self.persist()
         current = {self.get(r, 'order_batches', '__key'): r for r in self.rows('order_batches')}
         for row in orders:
             raw = self.get(row, 'order_lines', 'source_batch')
@@ -476,11 +488,33 @@ class Operations:
             key = 'batch:' + market[0] + ':' + raw.strip()
             batch = current.get(key)
             if batch is None:
-                label = code + '-' + raw.strip()
+                label = COUNTRIES[names[market[0]]][0] + '待补日期' + code + '待补件数'
                 batch = self.insert('order_batches', {'__key': key, '__label': label,
                     'batch_number': label, 'source_batch_label': raw, 'default_market': {'id': market[0]}})
                 current[key] = batch
             self.patch('order_lines', row, {'batch': {'id': batch['id']}})
+        grouped = defaultdict(list)
+        for row in orders:
+            for rid in linked(self.get(row, 'order_lines', 'batch')):
+                grouped[rid].append(row)
+        for batch in self.rows('order_batches'):
+            linked_rows = grouped[batch['id']]
+            market = linked(self.get(batch, 'order_batches', 'default_market'))
+            normalized = []
+            for row in linked_rows:
+                ms = linked(self.get(row, 'order_lines', 'market'))
+                normalized.append({'market_name': names.get(ms[0]) if len(ms) == 1 else None,
+                    'order_date': self.get(row, 'order_lines', 'order_date'),
+                    'order_quantity': self.get(row, 'order_lines', 'order_quantity')})
+            details = rules['batch_name_details'](normalized,
+                explicit_date=self.get(batch, 'order_batches', 'placed_date'),
+                default_market=names.get(market[0]) if len(market) == 1 else None)
+            updates = {'__label': details['name'], 'batch_number': details['name'],
+                'quantity_input': details['total'], 'naming_note': details['note'],
+                'orders': [{'id': r['id']} for r in sorted(linked_rows, key=lambda r: r['id'])] or None}
+            if details['inferred_date']:
+                updates['placed_date'] = details['date'] + 'T00:00:00.000Z'
+            self.patch('order_batches', batch, updates)
 
     def refresh_months(self, orders, market_names):
         groups, gaps = rules['aggregate_orders'](orders)
@@ -542,7 +576,7 @@ class Operations:
                    'actual_quantity', 'pending_quantity', 'picked_quantity', 'forecast_price',
                    'forecast_value', 'actual_value', 'coverage_note', 'orders']
         configs = [('order_lines', order), ('monthly_overview', summary),
-                   ('order_batches', ['__label', 'batch_number', 'default_market', 'default_customer', 'source_batch_label'])]
+                   ('order_batches', ['__label', 'placed_date', 'default_market', 'total_quantity', 'orders', 'naming_note', 'source_batch_label'])]
         minimal = self.state.get('structure_version') == 'minimal-7-v1'
         if minimal:
             order = [k for k in order if not k.startswith('source_')]

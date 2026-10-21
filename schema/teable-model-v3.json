@@ -1,7 +1,7 @@
 {
-  "version": "3.1",
+  "version": "3.2",
   "structure_version": "minimal-7-v1",
-  "snapshot_at": "2026-10-21T03:00:32.923152+00:00",
+  "snapshot_at": "2026-10-21T03:11:47.074131+00:00",
   "deployment_mode": "structure_snapshot_only",
   "tables": [
     {
@@ -661,7 +661,7 @@
         },
         {
           "key": "placed_date",
-          "name": "渠道下单日期",
+          "name": "批次下单日期",
           "type": "date",
           "primary": false,
           "computed": false
@@ -718,6 +718,36 @@
           "computed": false,
           "target": "customers",
           "relationship": "manyOne"
+        },
+        {
+          "key": "quantity_input",
+          "name": "批次数量汇总（自动）",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "total_quantity",
+          "name": "总件数",
+          "type": "formula",
+          "primary": false,
+          "computed": true
+        },
+        {
+          "key": "orders",
+          "name": "关联订单",
+          "type": "link",
+          "primary": false,
+          "computed": false,
+          "target": "order_lines",
+          "relationship": "manyMany"
+        },
+        {
+          "key": "naming_note",
+          "name": "命名提示",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
         }
       ],
       "views": [
@@ -1172,6 +1202,9 @@
     "order_number": "大区+真实下单日期YYYYMMDD+国家+国家独立连续6位序号",
     "number_grain": "每条SKU订单明细",
     "batch_name_unique": false,
+    "batch_name": "大区码+批次下单日期YYYYMMDD+国家码+关联订单实际订单数量之和",
+    "batch_date": "明确填写的批次下单日期优先；仅全部关联订单日期一致时自动补空值",
+    "batch_missing_date": "显示待补日期，不取导入日或猜测最早/最晚日期",
     "missing_order_date": "不生成订单号，不猜测月份",
     "country_codes": {
       "BRA": "SA",

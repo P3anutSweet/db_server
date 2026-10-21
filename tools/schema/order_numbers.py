@@ -85,6 +85,57 @@ def amount(quantity, price):
     return float((Decimal(str(quantity)) * Decimal(str(price))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
 
+def batch_name_details(rows, explicit_date=None, default_market=None):
+    """Name a batch from its own date/country and the current linked order quantities.
+
+    Missing or conflicting line dates never imply an earliest/latest batch date.
+    A manually supplied batch date is authoritative and does not alter line dates.
+    """
+    notes = []
+    markets = {r.get('market_name') for r in rows}
+    if not rows and default_market:
+        markets = {default_market}
+    market = next(iter(markets)) if len(markets) == 1 else None
+    if rows and default_market and market != default_market:
+        market = None
+        notes.append('批次地区市场与关联订单不一致，请确认')
+    region, country = COUNTRIES.get(market, (None, None))
+    if country is None:
+        notes.append('需确认批次唯一国家；关联订单的地区市场须一致')
+    day = business_day(explicit_date)
+    inferred = False
+    if day is None:
+        dates = [business_day(r.get('order_date')) for r in rows]
+        known = set(dates)
+        if dates and None not in known and len(known) == 1:
+            day = next(iter(known))
+            inferred = True
+        else:
+            notes.append('待补真实批次下单日期' if None in known or not dates else
+                         '关联订单有多个下单日期，请填写批次下单日期')
+    total = Decimal(0)
+    valid = bool(rows)
+    for row in rows:
+        value = row.get('order_quantity')
+        if value is None or isinstance(value, bool):
+            valid = False
+            continue
+        quantity = Decimal(str(value))
+        if not quantity.is_finite() or quantity < 0:
+            valid = False
+        else:
+            total += quantity
+    if not valid:
+        total_value, total_text = None, '待补件数'
+        notes.append('需确认全部关联订单数量；未关联订单时不生成零件数')
+    else:
+        total_value = int(total) if total == total.to_integral_value() else float(total)
+        total_text = format(total, 'f').rstrip('0').rstrip('.') if '.' in format(total, 'f') else format(total, 'f')
+    label = (region or '待补大区') + (day.strftime('%Y%m%d') if day else '待补日期') + (country or '待补国家') + total_text
+    return {'name': label, 'total': total_value, 'date': day.isoformat() if day else None,
+            'inferred_date': inferred, 'market_name': market, 'note': '；'.join(notes) or None}
+
+
 def aggregate_orders(rows):
     """Monthly order cohorts, independent of forecast/delivery/pickup dates.
 

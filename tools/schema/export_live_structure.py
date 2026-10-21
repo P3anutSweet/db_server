@@ -20,12 +20,15 @@ def main():
     state = json.loads((args.folder / 'state.json').read_text())
     api = helper['Api']('http://127.0.0.1:3000', args.token_file.read_text().strip())
     names = {v: k for k, v in state['tables'].items()}
-    model = {'version': '3.1' if state.get('structure_version') == 'minimal-7-v1' else '3.0',
+    model = {'version': '3.2' if state.get('batch_name_version') else '3.1' if state.get('structure_version') == 'minimal-7-v1' else '3.0',
         'structure_version': state.get('structure_version'), 'snapshot_at': dt.datetime.now(dt.timezone.utc).isoformat(),
         'deployment_mode': 'structure_snapshot_only', 'tables': [],
         'rules': {'forecast_owner': '渠道业务', 'forecast_source': '2026年10月、11月计划列',
             'currency': 'USD', 'order_number': '大区+真实下单日期YYYYMMDD+国家+国家独立连续6位序号',
             'number_grain': '每条SKU订单明细', 'batch_name_unique': False,
+            'batch_name': '大区码+批次下单日期YYYYMMDD+国家码+关联订单实际订单数量之和',
+            'batch_date': '明确填写的批次下单日期优先；仅全部关联订单日期一致时自动补空值',
+            'batch_missing_date': '显示待补日期，不取导入日或猜测最早/最晚日期',
             'missing_order_date': '不生成订单号，不猜测月份',
             'country_codes': {'BRA': 'SA', 'ARG': 'SA', 'VIE': 'SEA', 'PHI': 'SEA', 'HKG': 'SEA', 'POL': 'EU', 'TUR': 'EU'},
             'pickup': '渠道业务从基地或仓库提走；不是客户交付',
