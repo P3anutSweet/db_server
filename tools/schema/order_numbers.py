@@ -6,9 +6,10 @@ import sqlite3
 from collections import defaultdict
 from zoneinfo import ZoneInfo
 
-COUNTRIES = {'巴西': ('SA', 'BRA'), '阿根廷': ('SA', 'ARG'), '越南': ('SEA', 'VIE'),
-             '菲律宾': ('SEA', 'PHI'), '香港': ('SEA', 'HKG'),
+COUNTRIES = {'巴西': ('SA', 'BRA'), '阿根廷': ('SA', 'ARG'), '越南': ('SEA', 'VNM'),
+             '菲律宾': ('SEA', 'PHL'), '香港': ('SEA', 'HKG'),
              '波兰': ('EU', 'POL'), '土耳其': ('EU', 'TUR')}
+LEGACY_COUNTRY_CODES = {'VIE': 'VNM', 'PHI': 'PHL'}
 CHANNEL_STATES = ['预测', '已下单', '客户付款中', '提货中', '已提货', '已交付']
 ADMIN_STATES = ['需确认订单状态', '需确认付款状态', '需确认提货状态', '需确认交付状态', '已完结']
 ORDERED_STATES = set(CHANNEL_STATES) - {'预测'}
@@ -53,6 +54,28 @@ class CountryCounter:
     def floor(self, country, value):
         with self.connect() as db:
             db.execute('INSERT INTO counters VALUES(?,?) ON CONFLICT(country) DO UPDATE SET value=MAX(value,excluded.value)', (country, value))
+
+    def rename_country(self, old, new):
+        """Explicit migration only: preserve every reservation and high-water mark."""
+        if LEGACY_COUNTRY_CODES.get(old) != new:
+            raise ValueError('Only approved country-code replacements may be migrated.')
+        with self.connect() as db:
+            try:
+                db.execute('BEGIN IMMEDIATE')
+                collision = db.execute('SELECT 1 FROM reservations a JOIN reservations b ON a.seq=b.seq '
+                    'WHERE a.country=? AND b.country=? LIMIT 1', (old, new)).fetchone()
+                if collision:
+                    raise ValueError('Country sequence collision; no reservations changed.')
+                maximum = db.execute('SELECT MAX(value) FROM counters WHERE country IN (?,?)', (old, new)).fetchone()[0]
+                reserved = db.execute('SELECT MAX(seq) FROM reservations WHERE country IN (?,?)', (old, new)).fetchone()[0]
+                db.execute('UPDATE reservations SET country=? WHERE country=?', (new, old))
+                db.execute('INSERT INTO counters VALUES(?,?) ON CONFLICT(country) DO UPDATE SET value=MAX(value,excluded.value)',
+                           (new, max(maximum or 0, reserved or 0)))
+                db.execute('DELETE FROM counters WHERE country=?', (old,))
+                db.commit()
+            except BaseException:
+                db.rollback()
+                raise
 
     def reserve(self, country, record, existing=None):
         db = self.connect()

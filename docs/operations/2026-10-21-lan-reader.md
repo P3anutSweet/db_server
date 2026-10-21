@@ -39,3 +39,5 @@ The final root activation was still pending user authentication when this note w
 
 After activation, verify `/` redirects to `/read`, the reader returns200 over trusted HTTPS, staff base pages still load,
 and the newly permitted visitor can open a share. Browser trust in the existing local certificate authority remains a separate requirement.
+
+Activation follow-up: the entry was subsequently verified at200 over trusted HTTPS and contains the intended reader iframe. All seven anonymous views were rechecked after the V3.3 identifier migration.

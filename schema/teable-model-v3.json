@@ -1,7 +1,7 @@
 {
-  "version": "3.2",
+  "version": "3.3",
   "structure_version": "minimal-7-v1",
-  "snapshot_at": "2026-10-21T03:11:47.074131+00:00",
+  "snapshot_at": "2026-10-21T03:46:50.058361+00:00",
   "deployment_mode": "structure_snapshot_only",
   "tables": [
     {
@@ -209,7 +209,8 @@
         "当月概览",
         "2026年10月",
         "2026年11月",
-        "全部月份"
+        "全部月份",
+        "局域网只读"
       ]
     },
     {
@@ -217,11 +218,11 @@
       "name": "订单明细",
       "fields": [
         {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
+          "key": "order_number",
+          "name": "订单号",
+          "type": "formula",
           "primary": true,
-          "computed": false
+          "computed": true
         },
         {
           "key": "__key",
@@ -586,13 +587,6 @@
           "computed": false
         },
         {
-          "key": "order_number",
-          "name": "订单号",
-          "type": "formula",
-          "primary": false,
-          "computed": true
-        },
-        {
           "key": "pending_quantity",
           "name": "未提货数量",
           "type": "formula",
@@ -631,7 +625,8 @@
         "香港订单",
         "菲律宾订单",
         "日期待补",
-        "原始资料"
+        "原始资料",
+        "局域网只读"
       ]
     },
     {
@@ -751,7 +746,8 @@
         }
       ],
       "views": [
-        "全部记录"
+        "全部记录",
+        "局域网只读"
       ]
     },
     {
@@ -903,7 +899,8 @@
         }
       ],
       "views": [
-        "全部记录"
+        "全部记录",
+        "局域网只读"
       ]
     },
     {
@@ -1003,7 +1000,8 @@
         }
       ],
       "views": [
-        "全部记录"
+        "全部记录",
+        "局域网只读"
       ]
     },
     {
@@ -1034,9 +1032,18 @@
         {
           "key": "name",
           "name": "市场名称",
-          "type": "singleLineText",
+          "type": "singleSelect",
           "primary": false,
-          "computed": false
+          "computed": false,
+          "choices": [
+            "巴西",
+            "阿根廷",
+            "波兰",
+            "土耳其",
+            "越南",
+            "香港",
+            "菲律宾"
+          ]
         },
         {
           "key": "owner",
@@ -1105,10 +1112,18 @@
           "type": "longText",
           "primary": false,
           "computed": false
+        },
+        {
+          "key": "大区编码",
+          "name": "大区编码",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
         }
       ],
       "views": [
-        "全部记录"
+        "全部记录",
+        "局域网只读"
       ]
     },
     {
@@ -1191,7 +1206,8 @@
         }
       ],
       "views": [
-        "全部记录"
+        "全部记录",
+        "局域网只读"
       ]
     }
   ],
@@ -1209,12 +1225,13 @@
     "country_codes": {
       "BRA": "SA",
       "ARG": "SA",
-      "VIE": "SEA",
-      "PHI": "SEA",
+      "VNM": "SEA",
+      "PHL": "SEA",
       "HKG": "SEA",
       "POL": "EU",
       "TUR": "EU"
     },
+    "order_primary_field": "订单号；缺真实下单日期时留空",
     "pickup": "渠道业务从基地或仓库提走；不是客户交付",
     "monthly_actual": "按真实下单月归组；提货为这些订单的累计进度",
     "missing_price": "金额留空，零价格有效"

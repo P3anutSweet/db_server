@@ -10,6 +10,37 @@ spec.loader.exec_module(rules)
 
 
 class OperationsTests(unittest.TestCase):
+    def test_canonical_country_codes(self):
+        day = rules.business_day('2026-10-20')
+        self.assertEqual(rules.order_number('SEA', 'VNM', day, 5), 'SEA20261020VNM000005')
+        self.assertEqual(rules.order_number('SEA', 'PHL', day, 23), 'SEA20261020PHL000023')
+        self.assertEqual(rules.batch_name_details([self.batch_row(market_name='越南')])['name'], 'SEA20261020VNM1000')
+        for old in ['VIE', 'PHI']:
+            with self.assertRaises(ValueError):
+                rules.order_number('SEA', old, day, 1)
+
+    def test_rename_country_preserves_reservations_and_durable_floor(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as tmp:
+            c = rules.CountryCounter(Path(tmp) / 'counter.db')
+            c.reserve('VIE', 'old', 5)
+            c.floor('VIE', 12)
+            c.rename_country('VIE', 'VNM')
+            c.rename_country('VIE', 'VNM')
+            self.assertEqual(c.reserve('VNM', 'old'), 5)
+            self.assertEqual(c.reserve('VNM', 'next'), 13)
+            with c.connect() as db:
+                self.assertIsNone(db.execute('SELECT value FROM counters WHERE country="VIE"').fetchone())
+
+    def test_rename_collision_rolls_back(self):
+        with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as tmp:
+            c = rules.CountryCounter(Path(tmp) / 'counter.db')
+            c.reserve('PHI', 'old', 3)
+            c.reserve('PHL', 'new', 3)
+            with self.assertRaises(ValueError):
+                c.rename_country('PHI', 'PHL')
+            self.assertEqual(c.reserve('PHI', 'old'), 3)
+            self.assertEqual(c.reserve('PHL', 'new'), 3)
+
     def batch_row(self, **changes):
         return {'market_name':'巴西', 'order_date':'2026-10-20', 'order_quantity':1000, **changes}
 
@@ -57,7 +88,7 @@ class OperationsTests(unittest.TestCase):
             self.assertEqual(rules.CountryCounter(p).reserve('BRA', 'three'), 2)
             self.assertEqual(c.reserve('BRA', 'one'), 1)
             with self.assertRaises(ValueError):
-                c.reserve('VIE', 'one')
+                c.reserve('VNM', 'one')
 
     def test_concurrent_requests_do_not_duplicate_or_reuse(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as tmp:
@@ -71,9 +102,9 @@ class OperationsTests(unittest.TestCase):
     def test_six_digits_never_wrap(self):
         with tempfile.TemporaryDirectory(dir=Path(__file__).resolve().parents[1]) as tmp:
             c = rules.CountryCounter(Path(tmp) / 'counter.db')
-            c.floor('PHI', 999999)
+            c.floor('PHL', 999999)
             with self.assertRaises(ValueError):
-                c.reserve('PHI', 'overflow')
+                c.reserve('PHL', 'overflow')
 
     def test_order_date_uses_shanghai_day(self):
         day = rules.business_day('2026-10-19T16:00:00.000Z')

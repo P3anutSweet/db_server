@@ -21,7 +21,7 @@ if not RULES_PATH.exists():
 rules = runpy.run_path(str(RULES_PATH))
 COUNTRIES, CHANNEL_STATES, ADMIN_STATES = (rules[k] for k in ('COUNTRIES', 'CHANNEL_STATES', 'ADMIN_STATES'))
 MINIMAL_TABLES = {'markets', 'customers', 'tags', 'skus', 'order_batches', 'order_lines', 'monthly_overview'}
-LAYOUT_VERSION = '3.2'
+LAYOUT_VERSION = '3.3'
 
 
 def linked(value):
@@ -366,6 +366,8 @@ class Operations:
                 self.insert('monthly_overview', {'__key': stable, '__label': key[0], **values})
 
     def refresh(self):
+        if self.state.get('identifier_migration_pending'):
+            raise ValueError('Resume the explicit identifier migration before refreshing.')
         if self.state.get('operations_version') != '3.0':
             raise ValueError('Complete --setup before enabling refresh.')
         if self.state.get('minimal_migration') and self.state.get('structure_version') != 'minimal-7-v1':
@@ -590,6 +592,9 @@ class Operations:
             'source_status', 'source_order_date', 'source_quantity', 'source_picked', 'source_pending',
             'source_ean', 'estimated_price', 'source_pickup_note', 'source_delivery_note', 'source_notes',
             'source_provenance', 'source_plan_history']
+        if self.state.get('order_primary_version') == 'order-number-v1':
+            configs[0] = ('order_lines', [k for k in configs[0][1] if k != '__label'])
+            source_columns.remove('__label')
         for table, shown in configs:
             tid = self.tables[table]
             views = self.api.call('GET', f'/table/{tid}/view')
