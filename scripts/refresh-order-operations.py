@@ -21,7 +21,7 @@ if not RULES_PATH.exists():
 rules = runpy.run_path(str(RULES_PATH))
 COUNTRIES, CHANNEL_STATES, ADMIN_STATES = (rules[k] for k in ('COUNTRIES', 'CHANNEL_STATES', 'ADMIN_STATES'))
 MINIMAL_TABLES = {'markets', 'customers', 'tags', 'skus', 'order_batches', 'order_lines', 'monthly_overview'}
-LAYOUT_VERSION = '3.3'
+LAYOUT_VERSION = '3.4'
 
 
 def linked(value):
@@ -366,6 +366,8 @@ class Operations:
                 self.insert('monthly_overview', {'__key': stable, '__label': key[0], **values})
 
     def refresh(self):
+        if self.state.get('source_cleanup_pending'):
+            raise ValueError('Resume source cleanup before refreshing.')
         if self.state.get('identifier_migration_pending'):
             raise ValueError('Resume the explicit identifier migration before refreshing.')
         if self.state.get('operations_version') != '3.0':
@@ -478,8 +480,9 @@ class Operations:
             self.state['batch_name_version'] = 'region-date-country-quantity-v1'
             self.state.pop('operations_layout_version', None)
             self.persist()
-        current = {self.get(r, 'order_batches', '__key'): r for r in self.rows('order_batches')}
-        for row in orders:
+        source_removed = self.state.get('source_storage_version') == 'removed-v1'
+        current = {} if source_removed else {self.get(r, 'order_batches', '__key'): r for r in self.rows('order_batches')}
+        for row in ([] if source_removed else orders):
             raw = self.get(row, 'order_lines', 'source_batch')
             if not raw or linked(self.get(row, 'order_lines', 'batch')):
                 continue
@@ -563,7 +566,8 @@ class Operations:
                     values['refreshed_at'] = now
                 self.patch('monthly_overview', row, values)
             else:
-                self.insert('monthly_overview', {'__key': '|'.join(key), 'refreshed_at': now, **values})
+                metadata = {'__key': '|'.join(key)} if '__key' in self.fields['monthly_overview'] else {}
+                self.insert('monthly_overview', {**metadata, 'refreshed_at': now, **values})
 
     def validate_minimal(self):
         if set(self.tables) != MINIMAL_TABLES or set(self.tables.values()) != self.active:
@@ -605,7 +609,7 @@ class Operations:
                 desired += [(name + '订单', {'conjunction': 'and', 'filterSet': [
                     {'fieldId': self.fields[table]['country_code'], 'operator': 'is', 'value': code}]})
                     for name, (_, code) in COUNTRIES.items()]
-                if minimal:
+                if minimal and self.state.get('source_storage_version') != 'removed-v1':
                     desired.append(('原始资料', None))
             if table == 'monthly_overview':
                 month = dt.datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m')

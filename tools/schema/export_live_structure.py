@@ -20,7 +20,7 @@ def main():
     state = json.loads((args.folder / 'state.json').read_text())
     api = helper['Api']('http://127.0.0.1:3000', args.token_file.read_text().strip())
     names = {v: k for k, v in state['tables'].items()}
-    model = {'version': '3.3' if state.get('order_primary_version') else '3.2' if state.get('batch_name_version') else '3.1' if state.get('structure_version') == 'minimal-7-v1' else '3.0',
+    model = {'version': '3.4' if state.get('source_storage_version') == 'removed-v1' else '3.3' if state.get('order_primary_version') else '3.2' if state.get('batch_name_version') else '3.1' if state.get('structure_version') == 'minimal-7-v1' else '3.0',
         'structure_version': state.get('structure_version'), 'snapshot_at': dt.datetime.now(dt.timezone.utc).isoformat(),
         'deployment_mode': 'structure_snapshot_only', 'tables': [],
         'rules': {'forecast_owner': '渠道业务', 'forecast_source': '2026年10月、11月计划列',
@@ -34,7 +34,8 @@ def main():
             'order_primary_field': '订单号；缺真实下单日期时留空',
             'pickup': '渠道业务从基地或仓库提走；不是客户交付',
             'monthly_actual': '按真实下单月归组；提货为这些订单的累计进度',
-            'missing_price': '金额留空，零价格有效'}}
+            'missing_price': '金额留空，零价格有效',
+            'source_storage': '业务库不保留原始导入资料；逐次记录变更独立备份' if state.get('source_storage_version') == 'removed-v1' else '原始导入资料暂存于隐藏字段'}}
     for table in api.call('GET', f'/base/{state["base_id"]}/table'):
         key = names[table['id']]
         reverse = {v: k for k, v in state['fields'][key].items()}
