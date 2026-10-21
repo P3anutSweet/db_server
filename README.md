@@ -16,6 +16,9 @@ order number. Batches group lines across SKUs and months; batch names are not un
 Business forecasts belong to channel staff. The monthly overview compares business forecasts, actual orders,
 uncollected and collected quantities, plus USD estimates. Country counters and monthly aggregates refresh every minute.
 The former warehouse, packaging, allocation and pickup-document modules have been removed.
+The [seven-table consolidation](docs/operations/2026-10-21-minimal-structure.md) is now live: monthly overview,
+orders, batches, products, customers, markets and a shared tag dictionary. Business regions are market fields;
+customer preferences and product tags are direct links. Imported source and reference-plan history is embedded in orders.
 The [market and tag extension](docs/database-design/MARKETS_AND_TAGS.md) adds business regions, local markets,
 customers, scoped customer preferences and verified SKU tags using a shared tag dictionary.
 

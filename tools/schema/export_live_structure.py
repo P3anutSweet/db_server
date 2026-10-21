@@ -20,7 +20,8 @@ def main():
     state = json.loads((args.folder / 'state.json').read_text())
     api = helper['Api']('http://127.0.0.1:3000', args.token_file.read_text().strip())
     names = {v: k for k, v in state['tables'].items()}
-    model = {'version': '3.0', 'snapshot_at': dt.datetime.now(dt.timezone.utc).isoformat(),
+    model = {'version': '3.1' if state.get('structure_version') == 'minimal-7-v1' else '3.0',
+        'structure_version': state.get('structure_version'), 'snapshot_at': dt.datetime.now(dt.timezone.utc).isoformat(),
         'deployment_mode': 'structure_snapshot_only', 'tables': [],
         'rules': {'forecast_owner': '渠道业务', 'forecast_source': '2026年10月、11月计划列',
             'currency': 'USD', 'order_number': '大区+真实下单日期YYYYMMDD+国家+国家独立连续6位序号',

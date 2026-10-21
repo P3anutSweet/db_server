@@ -1,11 +1,12 @@
 {
-  "version": "3.0",
-  "snapshot_at": "2026-10-20T15:03:17.652892+00:00",
+  "version": "3.1",
+  "structure_version": "minimal-7-v1",
+  "snapshot_at": "2026-10-21T03:00:32.923152+00:00",
   "deployment_mode": "structure_snapshot_only",
   "tables": [
     {
-      "key": "regions",
-      "name": "业务大区",
+      "key": "monthly_overview",
+      "name": "月度总览",
       "fields": [
         {
           "key": "__label",
@@ -16,199 +17,26 @@
         },
         {
           "key": "__key",
-          "name": "导入键",
+          "name": "汇总键",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "code",
-          "name": "大区编码",
+          "key": "month",
+          "name": "月份",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "name",
-          "name": "大区名称",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "active",
-          "name": "启用",
-          "type": "checkbox",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "business_owner",
-          "name": "业务负责人",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "markets",
-      "name": "地区市场",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "code",
-          "name": "市场编码",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "name",
-          "name": "市场名称",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "owner",
-          "name": "市场负责人",
-          "type": "user",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "active",
-          "name": "启用",
-          "type": "checkbox",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "source_region",
-          "name": "原大区分组",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "review_state",
-          "name": "归属核对",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "region",
-          "name": "业务大区",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "regions",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "business_owner",
-          "name": "业务负责人",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "sequence_highwater",
-          "name": "订单序号保留上限",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "customers",
-      "name": "客户档案",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "code",
-          "name": "客户编码",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "name",
-          "name": "客户名称",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "owner",
-          "name": "客户负责人",
-          "type": "user",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "state",
-          "name": "合作状态",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "潜在",
-            "合作中",
-            "暂停",
-            "停止"
-          ]
-        },
-        {
-          "key": "notes",
-          "name": "客户说明",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "markets",
-          "name": "经营市场",
+          "key": "market",
+          "name": "地区市场",
           "type": "link",
           "primary": false,
           "computed": false,
           "target": "markets",
-          "relationship": "manyMany"
+          "relationship": "manyOne"
         },
         {
           "key": "business_owner",
@@ -220,275 +48,6 @@
             "target": "markets",
             "source": "business_owner"
           }
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "tags",
-      "name": "标签字典",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "code",
-          "name": "标签编码",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "name",
-          "name": "标签名称",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "group",
-          "name": "标签分类",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "产品定位",
-            "灯效外观",
-            "连接方式",
-            "使用场景",
-            "功能体验"
-          ]
-        },
-        {
-          "key": "definition",
-          "name": "定义及标注标准",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "aliases",
-          "name": "别名",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "applicable_to",
-          "name": "可用于",
-          "type": "multipleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "客户偏好",
-            "产品标注"
-          ]
-        },
-        {
-          "key": "active",
-          "name": "启用",
-          "type": "checkbox",
-          "primary": false,
-          "computed": false
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "customer_preferences",
-      "name": "客户偏好",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "category_scope",
-          "name": "适用品类",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": []
-        },
-        {
-          "key": "stance",
-          "name": "偏好方向",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "偏好",
-            "必须具备",
-            "避开"
-          ]
-        },
-        {
-          "key": "priority",
-          "name": "重要程度",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "高",
-            "中",
-            "低"
-          ]
-        },
-        {
-          "key": "basis",
-          "name": "依据",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "confirmed_on",
-          "name": "最近核实日期",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "valid_from",
-          "name": "生效日期",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "valid_to",
-          "name": "失效日期",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "state",
-          "name": "状态",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "待核实",
-            "有效",
-            "已替代",
-            "已失效"
-          ]
-        },
-        {
-          "key": "owner",
-          "name": "记录负责人",
-          "type": "user",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "customer",
-          "name": "客户",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "customers",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "market",
-          "name": "适用市场",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "markets",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "tag",
-          "name": "偏好标签",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "tags",
-          "relationship": "manyOne"
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "product_tags",
-      "name": "产品标签",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "state",
-          "name": "核实状态",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "待核实",
-            "已确认",
-            "已停用"
-          ]
-        },
-        {
-          "key": "basis",
-          "name": "标注依据",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "confirmed_on",
-          "name": "最近核实日期",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "owner",
-          "name": "维护人",
-          "type": "user",
-          "primary": false,
-          "computed": false
         },
         {
           "key": "sku",
@@ -500,245 +59,157 @@
           "relationship": "manyOne"
         },
         {
-          "key": "tag",
-          "name": "产品标签",
-          "type": "link",
+          "key": "product_name",
+          "name": "产品说明",
+          "type": "longText",
           "primary": false,
-          "computed": false,
-          "target": "tags",
-          "relationship": "manyOne"
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "skus",
-      "name": "产品SKU",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
+          "computed": true,
+          "lookup": {
+            "target": "skus",
+            "source": "description_zh"
+          }
         },
         {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
+          "key": "forecast_quantity",
+          "name": "业务预测数量",
+          "type": "number",
           "primary": false,
           "computed": false
         },
         {
-          "key": "part_number",
-          "name": "料号",
-          "type": "singleLineText",
+          "key": "forecast_price",
+          "name": "预估单价 USD",
+          "type": "number",
           "primary": false,
           "computed": false
         },
         {
-          "key": "brand",
-          "name": "品牌",
-          "type": "singleSelect",
+          "key": "known_quantity",
+          "name": "已登记订单数量",
+          "type": "number",
           "primary": false,
-          "computed": false,
-          "choices": [
-            "机械师",
-            "雷神"
-          ]
+          "computed": false
         },
         {
-          "key": "description_zh",
-          "name": "中文描述",
+          "key": "known_picked",
+          "name": "已登记已提货数量",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "known_pending",
+          "name": "已登记未提货数量",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "date_gap",
+          "name": "市场待补日期订单数",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "invalid_count",
+          "name": "数量或状态待确认订单数",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "missing_price",
+          "name": "缺价订单数",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "known_value",
+          "name": "已登记订单估值 USD",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "coverage_note",
+          "name": "统计说明",
           "type": "longText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "description_en",
-          "name": "英文描述",
+          "key": "forecast_source",
+          "name": "业务预测来源",
           "type": "longText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "category",
-          "name": "主品类",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "手柄",
-            "背包",
-            "键盘",
-            "鼠标"
-          ]
-        },
-        {
-          "key": "source_tags",
-          "name": "原品类及业务标签",
-          "type": "multipleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": []
-        },
-        {
-          "key": "base_uom",
-          "name": "基础计量单位",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "件",
-            "套等必须明确"
-          ]
-        },
-        {
-          "key": "manufacturer",
-          "name": "制造商",
+          "key": "forecast_initialized",
+          "name": "预测初始化版本",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "supplier",
-          "name": "供应商",
+          "key": "refreshed_at",
+          "name": "刷新时间",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "odm",
-          "name": "ODM",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "pid_raw",
-          "name": "PID原文",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "variant_attributes",
-          "name": "已确认版本属性",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "review_state",
-          "name": "主数据核对",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "order_batches",
-      "name": "渠道订单批次",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "batch_number",
-          "name": "订单批次名称",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "placed_date",
-          "name": "渠道下单日期",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "document_state",
-          "name": "订单状态",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "草稿",
-            "已确认",
-            "暂停",
-            "已关闭",
-            "已取消"
-          ]
-        },
-        {
-          "key": "source_batch_label",
-          "name": "原表批次文字",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "owner",
-          "name": "负责人",
-          "type": "user",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "channel",
-          "name": "原渠道文字（归档）",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "default_market",
-          "name": "默认地区市场",
+          "key": "orders",
+          "name": "关联订单",
           "type": "link",
           "primary": false,
           "computed": false,
-          "target": "markets",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "default_customer",
-          "name": "默认客户",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "customers",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "source_rows",
-          "name": "来源行",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "source_rows",
+          "target": "order_lines",
           "relationship": "manyMany"
+        },
+        {
+          "key": "actual_quantity",
+          "name": "实际订单数量",
+          "type": "formula",
+          "primary": false,
+          "computed": true
+        },
+        {
+          "key": "picked_quantity",
+          "name": "已提货数量",
+          "type": "formula",
+          "primary": false,
+          "computed": true
+        },
+        {
+          "key": "pending_quantity",
+          "name": "未提货数量",
+          "type": "formula",
+          "primary": false,
+          "computed": true
+        },
+        {
+          "key": "forecast_value",
+          "name": "预测估值 USD",
+          "type": "formula",
+          "primary": false,
+          "computed": true
+        },
+        {
+          "key": "actual_value",
+          "name": "订单总价 USD",
+          "type": "formula",
+          "primary": false,
+          "computed": true
         }
       ],
       "views": [
-        "全部记录"
+        "当月概览",
+        "2026年10月",
+        "2026年11月",
+        "全部月份"
       ]
     },
     {
@@ -949,7 +420,7 @@
         },
         {
           "key": "batch",
-          "name": "渠道订单批次",
+          "name": "订单批次",
           "type": "link",
           "primary": false,
           "computed": false,
@@ -982,15 +453,6 @@
           "computed": false,
           "target": "customers",
           "relationship": "manyOne"
-        },
-        {
-          "key": "source_rows",
-          "name": "来源行",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "source_rows",
-          "relationship": "manyMany"
         },
         {
           "key": "business_owner",
@@ -1143,6 +605,20 @@
           "type": "formula",
           "primary": false,
           "computed": true
+        },
+        {
+          "key": "source_provenance",
+          "name": "原始导入资料",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "source_plan_history",
+          "name": "原交付计划资料",
+          "type": "longText",
+          "primary": false,
+          "computed": false
         }
       ],
       "views": [
@@ -1154,12 +630,13 @@
         "越南订单",
         "香港订单",
         "菲律宾订单",
-        "日期待补"
+        "日期待补",
+        "原始资料"
       ]
     },
     {
-      "key": "line_plans",
-      "name": "分月计划",
+      "key": "order_batches",
+      "name": "订单批次",
       "fields": [
         {
           "key": "__label",
@@ -1176,280 +653,296 @@
           "computed": false
         },
         {
-          "key": "plan_kind",
-          "name": "计划节点",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "业务预测",
-            "预计提货",
-            "预计客户交付",
-            "原计划节点待核对"
-          ]
-        },
-        {
-          "key": "month",
-          "name": "计划年月",
+          "key": "batch_number",
+          "name": "订单批次名称",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "exact_date",
-          "name": "预计具体日期",
+          "key": "placed_date",
+          "name": "渠道下单日期",
           "type": "date",
           "primary": false,
           "computed": false
         },
         {
-          "key": "planned_qty",
-          "name": "计划数量",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "forecast_state",
-          "name": "原FCST提交状态（参考）",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "未提交",
-            "部分提交",
-            "已提交",
-            "不适用"
-          ]
-        },
-        {
-          "key": "submitted_date",
-          "name": "原FCST提交日期（参考）",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "state",
-          "name": "版本状态",
+          "key": "document_state",
+          "name": "订单状态",
           "type": "singleSelect",
           "primary": false,
           "computed": false,
           "choices": [
             "草稿",
-            "有效",
-            "已替代",
+            "已确认",
+            "暂停",
+            "已关闭",
             "已取消"
           ]
         },
         {
-          "key": "change_reason",
-          "name": "改期说明",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "line",
-          "name": "批次SKU明细",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "order_lines",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "supersedes",
-          "name": "替代旧计划",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "line_plans",
-          "relationship": "manyOne"
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "import_batches",
-      "name": "导入快照",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
+          "key": "source_batch_label",
+          "name": "原表批次文字",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "filename",
-          "name": "文件名",
+          "key": "owner",
+          "name": "负责人",
+          "type": "user",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "channel",
+          "name": "原渠道文字（归档）",
           "type": "singleLineText",
           "primary": false,
           "computed": false
         },
         {
-          "key": "sha256",
-          "name": "文件哈希",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "mapping_version",
-          "name": "映射版本",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "imported_at",
-          "name": "导入时间",
-          "type": "date",
-          "primary": false,
-          "computed": false
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "source_rows",
-      "name": "原始台账行",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "导入键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "sheet",
-          "name": "工作表",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "row",
-          "name": "行号",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "business_values",
-          "name": "白名单原值",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "classification",
-          "name": "归属核对",
-          "type": "singleSelect",
-          "primary": false,
-          "computed": false,
-          "choices": [
-            "正式订单",
-            "分月计划",
-            "意向需求",
-            "重复快照",
-            "待确认"
-          ]
-        },
-        {
-          "key": "snapshot",
-          "name": "导入快照",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "import_batches",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "matched_batch",
-          "name": "对应订单批次",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "order_batches",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "matched_line",
-          "name": "对应SKU明细",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "order_lines",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "matched_plan",
-          "name": "对应计划",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "line_plans",
-          "relationship": "manyOne"
-        }
-      ],
-      "views": [
-        "全部记录"
-      ]
-    },
-    {
-      "key": "monthly_overview",
-      "name": "月度总览",
-      "fields": [
-        {
-          "key": "__label",
-          "name": "记录名称",
-          "type": "singleLineText",
-          "primary": true,
-          "computed": false
-        },
-        {
-          "key": "__key",
-          "name": "汇总键",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "month",
-          "name": "月份",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "market",
-          "name": "地区市场",
+          "key": "default_market",
+          "name": "默认地区市场",
           "type": "link",
           "primary": false,
           "computed": false,
           "target": "markets",
           "relationship": "manyOne"
+        },
+        {
+          "key": "default_customer",
+          "name": "默认客户",
+          "type": "link",
+          "primary": false,
+          "computed": false,
+          "target": "customers",
+          "relationship": "manyOne"
+        }
+      ],
+      "views": [
+        "全部记录"
+      ]
+    },
+    {
+      "key": "skus",
+      "name": "产品SKU",
+      "fields": [
+        {
+          "key": "__label",
+          "name": "记录名称",
+          "type": "singleLineText",
+          "primary": true,
+          "computed": false
+        },
+        {
+          "key": "__key",
+          "name": "导入键",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "part_number",
+          "name": "料号",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "brand",
+          "name": "品牌",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "机械师",
+            "雷神"
+          ]
+        },
+        {
+          "key": "description_zh",
+          "name": "中文描述",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "description_en",
+          "name": "英文描述",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "category",
+          "name": "主品类",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "手柄",
+            "背包",
+            "键盘",
+            "鼠标"
+          ]
+        },
+        {
+          "key": "source_tags",
+          "name": "原品类及业务标签",
+          "type": "multipleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": []
+        },
+        {
+          "key": "base_uom",
+          "name": "基础计量单位",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "件",
+            "套等必须明确"
+          ]
+        },
+        {
+          "key": "manufacturer",
+          "name": "制造商",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "supplier",
+          "name": "供应商",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "odm",
+          "name": "ODM",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "pid_raw",
+          "name": "PID原文",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "variant_attributes",
+          "name": "已确认版本属性",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "review_state",
+          "name": "主数据核对",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "tags",
+          "name": "产品标签",
+          "type": "link",
+          "primary": false,
+          "computed": false,
+          "target": "tags",
+          "relationship": "manyMany"
+        },
+        {
+          "key": "tag_notes",
+          "name": "标签依据及说明",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "ean_code",
+          "name": "EAN",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        }
+      ],
+      "views": [
+        "全部记录"
+      ]
+    },
+    {
+      "key": "customers",
+      "name": "客户档案",
+      "fields": [
+        {
+          "key": "__label",
+          "name": "记录名称",
+          "type": "singleLineText",
+          "primary": true,
+          "computed": false
+        },
+        {
+          "key": "__key",
+          "name": "导入键",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "code",
+          "name": "客户编码",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "name",
+          "name": "客户名称",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "owner",
+          "name": "客户负责人",
+          "type": "user",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "state",
+          "name": "合作状态",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "潜在",
+            "合作中",
+            "暂停",
+            "停止"
+          ]
+        },
+        {
+          "key": "notes",
+          "name": "客户说明",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "markets",
+          "name": "经营市场",
+          "type": "link",
+          "primary": false,
+          "computed": false,
+          "target": "markets",
+          "relationship": "manyMany"
         },
         {
           "key": "business_owner",
@@ -1463,166 +956,212 @@
           }
         },
         {
-          "key": "sku",
-          "name": "产品SKU",
+          "key": "preferred_tags",
+          "name": "偏好标签",
           "type": "link",
           "primary": false,
           "computed": false,
-          "target": "skus",
-          "relationship": "manyOne"
-        },
-        {
-          "key": "product_name",
-          "name": "产品说明",
-          "type": "longText",
-          "primary": false,
-          "computed": true,
-          "lookup": {
-            "target": "skus",
-            "source": "description_zh"
-          }
-        },
-        {
-          "key": "forecast_quantity",
-          "name": "业务预测数量",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "forecast_price",
-          "name": "预估单价 USD",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "known_quantity",
-          "name": "已登记订单数量",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "known_picked",
-          "name": "已登记已提货数量",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "known_pending",
-          "name": "已登记未提货数量",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "date_gap",
-          "name": "市场待补日期订单数",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "invalid_count",
-          "name": "数量或状态待确认订单数",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "missing_price",
-          "name": "缺价订单数",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "known_value",
-          "name": "已登记订单估值 USD",
-          "type": "number",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "coverage_note",
-          "name": "统计说明",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "forecast_source",
-          "name": "业务预测来源",
-          "type": "longText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "forecast_initialized",
-          "name": "预测初始化版本",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "refreshed_at",
-          "name": "刷新时间",
-          "type": "singleLineText",
-          "primary": false,
-          "computed": false
-        },
-        {
-          "key": "orders",
-          "name": "关联订单",
-          "type": "link",
-          "primary": false,
-          "computed": false,
-          "target": "order_lines",
+          "target": "tags",
           "relationship": "manyMany"
         },
         {
-          "key": "actual_quantity",
-          "name": "实际订单数量",
-          "type": "formula",
+          "key": "preference_notes",
+          "name": "偏好说明",
+          "type": "longText",
           "primary": false,
-          "computed": true
-        },
-        {
-          "key": "picked_quantity",
-          "name": "已提货数量",
-          "type": "formula",
-          "primary": false,
-          "computed": true
-        },
-        {
-          "key": "pending_quantity",
-          "name": "未提货数量",
-          "type": "formula",
-          "primary": false,
-          "computed": true
-        },
-        {
-          "key": "forecast_value",
-          "name": "预测估值 USD",
-          "type": "formula",
-          "primary": false,
-          "computed": true
-        },
-        {
-          "key": "actual_value",
-          "name": "订单总价 USD",
-          "type": "formula",
-          "primary": false,
-          "computed": true
+          "computed": false
         }
       ],
       "views": [
-        "当月概览",
-        "2026年10月",
-        "2026年11月",
-        "全部月份"
+        "全部记录"
+      ]
+    },
+    {
+      "key": "markets",
+      "name": "地区市场",
+      "fields": [
+        {
+          "key": "__label",
+          "name": "记录名称",
+          "type": "singleLineText",
+          "primary": true,
+          "computed": false
+        },
+        {
+          "key": "__key",
+          "name": "导入键",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "code",
+          "name": "市场编码",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "name",
+          "name": "市场名称",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "owner",
+          "name": "市场负责人",
+          "type": "user",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "active",
+          "name": "启用",
+          "type": "checkbox",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "source_region",
+          "name": "原大区分组",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "review_state",
+          "name": "归属核对",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "region",
+          "name": "业务大区",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "东南亚",
+            "南美",
+            "欧洲"
+          ]
+        },
+        {
+          "key": "business_owner",
+          "name": "业务负责人",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "sequence_highwater",
+          "name": "订单序号保留上限",
+          "type": "number",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "business_region_code",
+          "name": "业务大区编码",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "region_provenance",
+          "name": "原大区资料",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        }
+      ],
+      "views": [
+        "全部记录"
+      ]
+    },
+    {
+      "key": "tags",
+      "name": "标签字典",
+      "fields": [
+        {
+          "key": "__label",
+          "name": "记录名称",
+          "type": "singleLineText",
+          "primary": true,
+          "computed": false
+        },
+        {
+          "key": "__key",
+          "name": "导入键",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "code",
+          "name": "标签编码",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "name",
+          "name": "标签名称",
+          "type": "singleLineText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "group",
+          "name": "标签分类",
+          "type": "singleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "产品定位",
+            "灯效外观",
+            "连接方式",
+            "使用场景",
+            "功能体验"
+          ]
+        },
+        {
+          "key": "definition",
+          "name": "定义及标注标准",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "aliases",
+          "name": "别名",
+          "type": "longText",
+          "primary": false,
+          "computed": false
+        },
+        {
+          "key": "applicable_to",
+          "name": "可用于",
+          "type": "multipleSelect",
+          "primary": false,
+          "computed": false,
+          "choices": [
+            "客户偏好",
+            "产品标注"
+          ]
+        },
+        {
+          "key": "active",
+          "name": "启用",
+          "type": "checkbox",
+          "primary": false,
+          "computed": false
+        }
+      ],
+      "views": [
+        "全部记录"
       ]
     }
   ],

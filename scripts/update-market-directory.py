@@ -14,6 +14,8 @@ import time
 
 
 def apply(api, state, data, save_state):
+    if state.get('structure_version') == 'minimal-7-v1':
+        raise ValueError('The region directory table was retired. Maintain market owners and customer records in the seven-table structure.')
     tables, fields = state['tables'], state['fields']
 
     def ensure_field(table, ro):

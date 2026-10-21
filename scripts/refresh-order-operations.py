@@ -20,6 +20,8 @@ if not RULES_PATH.exists():
     RULES_PATH = Path(__file__).with_name('order_numbers.py')
 rules = runpy.run_path(str(RULES_PATH))
 COUNTRIES, CHANNEL_STATES, ADMIN_STATES = (rules[k] for k in ('COUNTRIES', 'CHANNEL_STATES', 'ADMIN_STATES'))
+MINIMAL_TABLES = {'markets', 'customers', 'tags', 'skus', 'order_batches', 'order_lines', 'monthly_overview'}
+LAYOUT_VERSION = '3.1'
 
 
 def linked(value):
@@ -47,7 +49,7 @@ class Operations:
         self.tables, self.fields = self.state['tables'], self.state['fields']
         self.catalog = self.api.call('GET', f'/base/{self.state["base_id"]}/table')
         self.active = {t['id'] for t in self.catalog}
-        self.source = json.loads((folder / 'orders-import-private.json').read_text())
+        self.source = None if self.state.get('structure_version') == 'minimal-7-v1' else json.loads((folder / 'orders-import-private.json').read_text())
         self.counter = rules['CountryCounter'](folder / 'order-counters.sqlite3')
 
     def persist(self):
@@ -111,6 +113,14 @@ class Operations:
         return '{' + self.fields[table][key] + '}'
 
     def setup(self):
+        if self.state.get('structure_version') == 'minimal-7-v1':
+            self.validate_minimal()
+            self.layouts()
+            self.state['operations_layout_version'] = LAYOUT_VERSION
+            self.persist()
+            return
+        if self.state.get('minimal_migration'):
+            raise ValueError('Resume migrate-minimal-structure.py; do not rerun the historical setup during consolidation.')
         # Archive metadata and every active record before making schema changes.
         stamp = dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
         self.save(self.folder / ('operations-backup-' + stamp + '-private.json'), {
@@ -358,6 +368,10 @@ class Operations:
     def refresh(self):
         if self.state.get('operations_version') != '3.0':
             raise ValueError('Complete --setup before enabling refresh.')
+        if self.state.get('minimal_migration') and self.state.get('structure_version') != 'minimal-7-v1':
+            raise ValueError('Structure migration pending; resume migrate-minimal-structure.py.')
+        if self.state.get('structure_version') == 'minimal-7-v1':
+            self.validate_minimal()
         markets = {r['id']: r for r in self.rows('markets')}
         names = {rid: self.get(row, 'markets', 'name') for rid, row in markets.items()}
         for rid, row in markets.items():
@@ -430,9 +444,9 @@ class Operations:
         self.refresh_batches(orders, names)
         self.refresh_months(normalized, names)
         month = dt.datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m')
-        if self.state.get('operations_layout_version') != '3.0':
+        if self.state.get('operations_layout_version') != LAYOUT_VERSION:
             self.layouts()
-            self.state['operations_layout_version'] = '3.0'
+            self.state['operations_layout_version'] = LAYOUT_VERSION
             self.state['current_month_filter'] = month
             self.persist()
         elif self.state.get('current_month_filter') != month:
@@ -515,6 +529,10 @@ class Operations:
             else:
                 self.insert('monthly_overview', {'__key': '|'.join(key), 'refreshed_at': now, **values})
 
+    def validate_minimal(self):
+        if set(self.tables) != MINIMAL_TABLES or set(self.tables.values()) != self.active:
+            raise ValueError('The seven-table structure has changed; review mappings before refreshing. Removed tables will not be recreated.')
+
     def layouts(self):
         order = ['__label', 'order_number', 'market', 'business_owner', 'customer', 'sku', 'order_date', 'batch',
                  'channel_status', 'admin_status', 'order_quantity', 'pending_quantity', 'picked_quantity',
@@ -523,8 +541,22 @@ class Operations:
         summary = ['__label', 'month', 'market', 'business_owner', 'sku', 'product_name', 'forecast_quantity',
                    'actual_quantity', 'pending_quantity', 'picked_quantity', 'forecast_price',
                    'forecast_value', 'actual_value', 'coverage_note', 'orders']
-        for table, shown in [('order_lines', order), ('monthly_overview', summary),
-                             ('order_batches', ['__label', 'batch_number', 'default_market', 'default_customer', 'source_batch_label'])]:
+        configs = [('order_lines', order), ('monthly_overview', summary),
+                   ('order_batches', ['__label', 'batch_number', 'default_market', 'default_customer', 'source_batch_label'])]
+        minimal = self.state.get('structure_version') == 'minimal-7-v1'
+        if minimal:
+            order = [k for k in order if not k.startswith('source_')]
+            configs[0] = ('order_lines', order)
+            configs += [
+                ('skus', ['__label', 'brand', 'part_number', 'description_zh', 'ean_code', 'category', 'tags', 'tag_notes']),
+                ('customers', ['__label', 'name', 'markets', 'business_owner', 'preferred_tags', 'preference_notes', 'state', 'notes']),
+                ('markets', ['__label', 'name', 'code', 'region', 'business_owner', 'active']),
+                ('tags', ['__label', 'name', 'group', 'definition', 'applicable_to', 'active'])]
+        source_columns = ['__label', 'order_number', 'source_sheet', 'source_row_number', 'source_batch',
+            'source_status', 'source_order_date', 'source_quantity', 'source_picked', 'source_pending',
+            'source_ean', 'estimated_price', 'source_pickup_note', 'source_delivery_note', 'source_notes',
+            'source_provenance', 'source_plan_history']
+        for table, shown in configs:
             tid = self.tables[table]
             views = self.api.call('GET', f'/table/{tid}/view')
             byname = {v['name']: v for v in views}
@@ -534,6 +566,8 @@ class Operations:
                 desired += [(name + '订单', {'conjunction': 'and', 'filterSet': [
                     {'fieldId': self.fields[table]['country_code'], 'operator': 'is', 'value': code}]})
                     for name, (_, code) in COUNTRIES.items()]
+                if minimal:
+                    desired.append(('原始资料', None))
             if table == 'monthly_overview':
                 month = dt.datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y-%m')
                 desired = [(n, {'conjunction': 'and', 'filterSet': [
@@ -551,8 +585,9 @@ class Operations:
             for view in byname.values():
                 if view.get('type') != 'grid':
                     continue
-                meta = [{'fieldId': fid, 'columnMeta': {'order': shown.index(k) if k in shown else 100 + i,
-                    'hidden': k not in shown, 'width': 210 if k in {'followup_text', 'coverage_note'} else 150}}
+                columns = source_columns if table == 'order_lines' and view['name'] == '原始资料' else shown
+                meta = [{'fieldId': fid, 'columnMeta': {'order': columns.index(k) if k in columns else 100 + i,
+                    'hidden': k not in columns, 'width': 210 if k in {'followup_text', 'coverage_note', 'source_provenance', 'source_plan_history'} else 150}}
                     for i, (k, fid) in enumerate(self.fields[table].items())]
                 self.api.call('PUT', f'/table/{tid}/view/{view["id"]}/column-meta', meta)
         self.persist()

@@ -1,5 +1,8 @@
 # 2026-10-20 订单结构更新
 
+> 本文为首次V3实施记录。2026-10-21已完成 [七表结构迁移](2026-10-21-minimal-structure.md)，
+> 下文13表、独立大区和源数据表的结构描述已归档，业务编号及预测口径保持有效。
+
 已在服务器通过Teable API更新，并回读核对。业务定义见 [V3当前结构](../database-design/V3_CURRENT.md)。
 结构快照不含记录数据：[teable-model-v3.json](../../schema/teable-model-v3.json)。
 
